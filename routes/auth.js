@@ -85,26 +85,30 @@ router.post('/register', async (req, res) => {
 });
 
 // ── POST /api/auth/login ─────────────────────────────────────
-// Body: { email, password }
+// Body: { email, username, identifier, password }
 router.post('/login', async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, username, identifier, password } = req.body;
+    const loginId = (identifier || email || username || '').trim();
 
-    if (!email || !password) {
-      return res.status(400).json({ error: 'email and password are required' });
+    if (!loginId || !password) {
+      return res.status(400).json({ error: 'Email or Username and Password are required' });
     }
 
-    // TODO (MongoDB): User.findOne({ email })
+    // TODO (MongoDB): User.findOne({ $or: [{ email: loginId }, { username: loginId }] })
     const users = readDB('users');
-    const user  = users.find(u => u.email === email);
+    const user  = users.find(u =>
+      (u.email && u.email.toLowerCase() === loginId.toLowerCase()) ||
+      (u.username && u.username.toLowerCase() === loginId.toLowerCase())
+    );
 
     if (!user) {
-      return res.status(401).json({ error: 'Invalid credentials' });
+      return res.status(401).json({ error: 'Invalid email/username or password' });
     }
 
-    const validPassword = await bcrypt.compare(password, user.passwordHash);
-    if (!validPassword) {
-      return res.status(401).json({ error: 'Invalid credentials' });
+    const match = await bcrypt.compare(password, user.passwordHash);
+    if (!match) {
+      return res.status(401).json({ error: 'Invalid email/username or password' });
     }
 
     const token = jwt.sign({ id: user.id, username: user.username }, JWT_SECRET, { expiresIn: '7d' });
