@@ -1,0 +1,202 @@
+[
+  {
+    "id": "quiz-js-basics",
+    "title": "JavaScript Basics",
+    "subject": "JavaScript",
+    "difficulty": "easy",
+    "emoji": "⚡",
+    "description": "Test your JavaScript fundamentals — variables, functions, and core concepts.",
+    "questions": [
+      {
+        "id": "q1",
+        "text": "Which keyword is used to declare a block-scoped variable in JavaScript?",
+        "options": ["var", "let", "def", "dim"],
+        "correctAnswer": "let"
+      },
+      {
+        "id": "q2",
+        "text": "What does `typeof null` return in JavaScript?",
+        "options": ["null", "undefined", "object", "number"],
+        "correctAnswer": "object"
+      },
+      {
+        "id": "q3",
+        "text": "Which method removes the last element from an array?",
+        "options": ["shift()", "pop()", "splice()", "slice()"],
+        "correctAnswer": "pop()"
+      },
+      {
+        "id": "q4",
+        "text": "What is the output of `2 + '2'` in JavaScript?",
+        "options": ["4", "22", "NaN", "Error"],
+        "correctAnswer": "22"
+      },
+      {
+        "id": "q5",
+        "text": "Which symbol is used for strict equality comparison?",
+        "options": ["==", "===", "=", "!="],
+        "correctAnswer": "==="
+      }
+    ]
+  },
+  {
+    "id": "quiz-python-basics",
+    "title": "Python Fundamentals",
+    "subject": "Python",
+    "difficulty": "easy",
+    "emoji": "🐍",
+    "description": "Core Python syntax, data types, and built-in functions.",
+    "questions": [
+      {
+        "id": "q1",
+        "text": "Which function is used to display output in Python?",
+        "options": ["echo()", "console.log()", "print()", "write()"],
+        "correctAnswer": "print()"
+      },
+      {
+        "id": "q2",
+        "text": "What data type is the result of `type(3.14)` in Python?",
+        "options": ["int", "str", "float", "double"],
+        "correctAnswer": "float"
+      },
+      {
+        "id": "q3",
+        "text": "Which keyword is used to define a function in Python?",
+        "options": ["function", "fun", "def", "fn"],
+        "correctAnswer": "def"
+      },
+      {
+        "id": "q4",
+        "text": "How do you create a list in Python?",
+        "options": ["{1, 2, 3}", "(1, 2, 3)", "[1, 2, 3]", "<1, 2, 3>"],
+        "correctAnswer": "[1, 2, 3]"
+      },
+      {
+        "id": "q5",
+        "text": "What does `len('ScholarQuest')` return?",
+        "options": ["11", "12", "13", "10"],
+        "correctAnswer": "12"
+      }
+    ]
+  },
+  {
+    "id": "quiz-dsa-basics",
+    "title": "DSA Fundamentals",
+    "subject": "Data Structures",
+    "difficulty": "medium",
+    "emoji": "🧱",
+    "description": "Test your knowledge of arrays, stacks, queues, and Big-O notation.",
+    "questions": [
+      {
+        "id": "q1",
+        "text": "What is the time complexity of binary search?",
+        "options": ["O(n)", "O(n²)", "O(log n)", "O(1)"],
+        "correctAnswer": "O(log n)"
+      },
+      {
+        "id": "q2",
+        "text": "Which data structure uses LIFO (Last In, First Out) order?",
+        "options": ["Queue", "Stack", "Array", "Linked List"],
+        "correctAnswer": "Stack"
+      },
+      {
+        "id": "q3",
+        "text": "What is the worst-case time complexity of Bubble Sort?",
+        "options": ["O(n log n)", "O(log n)", "O(n)", "O(n²)"],
+        "correctAnswer": "O(n²)"
+      },
+      {
+        "id": "q4",
+        "text": "Which traversal visits nodes in Left → Root → Right order?",
+        "options": ["Pre-order", "Post-order", "In-order", "Level-order"],
+        "correctAnswer": "In-order"
+      },
+      {
+        "id": "q5",
+        "text": "Which data structure is used to implement BFS (Breadth-First Search)?",
+        "options": ["Stack", "Queue", "Heap", "Graph"],
+        "correctAnswer": "Queue"
+      }
+    ]
+  },
+  {
+    "id": "quiz-dbms",
+    "title": "DBMS & SQL Basics",
+    "subject": "Database",
+    "difficulty": "medium",
+    "emoji": "🗄️",
+    "description": "SQL queries, normalization, and database design concepts.",
+    "questions": [
+      {
+        "id": "q1",
+        "text": "Which SQL command is used to retrieve data from a table?",
+        "options": ["INSERT", "UPDATE", "SELECT", "DELETE"],
+        "correctAnswer": "SELECT"
+      },
+      {
+        "id": "q2",
+        "text": "What does PRIMARY KEY ensure in a table?",
+        "options": ["Unique values only", "NULL values allowed", "Foreign key reference", "Auto-increment only"],
+        "correctAnswer": "Unique values only"
+      },
+      {
+        "id": "q3",
+        "text": "Which normal form eliminates transitive dependencies?",
+        "options": ["1NF", "2NF", "3NF", "BCNF"],
+        "correctAnswer": "3NF"
+      },
+      {
+        "id": "q4",
+        "text": "What does the SQL `JOIN` clause do?",
+        "options": ["Deletes rows", "Combines rows from multiple tables", "Creates a new table", "Sorts results"],
+        "correctAnswer": "Combines rows from multiple tables"
+      },
+      {
+        "id": "q5",
+        "text": "Which command saves a transaction permanently in SQL?",
+        "options": ["ROLLBACK", "SAVEPOINT", "COMMIT", "BEGIN"],
+        "correctAnswer": "COMMIT"
+      }
+    ]
+  },
+  {
+    "id": "quiz-os",
+    "title": "Operating Systems",
+    "subject": "OS",
+    "difficulty": "hard",
+    "emoji": "💻",
+    "description": "Process management, scheduling, memory, and deadlocks.",
+    "questions": [
+      {
+        "id": "q1",
+        "text": "Which scheduling algorithm is optimal for minimizing average waiting time?",
+        "options": ["FCFS", "Round Robin", "SJF", "Priority Scheduling"],
+        "correctAnswer": "SJF"
+      },
+      {
+        "id": "q2",
+        "text": "What is a deadlock?",
+        "options": ["CPU crash", "Memory overflow", "Circular wait among processes", "Disk failure"],
+        "correctAnswer": "Circular wait among processes"
+      },
+      {
+        "id": "q3",
+        "text": "Which page replacement algorithm has the lowest page fault rate theoretically?",
+        "options": ["LRU", "FIFO", "Optimal", "MRU"],
+        "correctAnswer": "Optimal"
+      },
+      {
+        "id": "q4",
+        "text": "What is thrashing in an OS context?",
+        "options": ["High CPU utilization", "Excessive paging activity degrading performance", "Memory leak", "Process starvation"],
+        "correctAnswer": "Excessive paging activity degrading performance"
+      },
+      {
+        "id": "q5",
+        "text": "Which system call creates a new process in Unix/Linux?",
+        "options": ["exec()", "spawn()", "fork()", "create()"],
+        "correctAnswer": "fork()"
+      }
+    ]
+  }
+]
