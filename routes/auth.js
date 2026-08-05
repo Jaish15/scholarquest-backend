@@ -121,4 +121,86 @@ router.post('/login', async (req, res) => {
   }
 });
 
+// ── POST /api/auth/forgot-password ───────────────────────────
+// Body: { email }
+router.post('/forgot-password', (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ error: 'Email is required' });
+    }
+
+    const users = readDB('users');
+    const userIndex = users.findIndex(u => u.email.toLowerCase() === email.toLowerCase());
+
+    if (userIndex === -1) {
+      return res.status(404).json({ error: 'No scholar account found with this email' });
+    }
+
+    // Generate a 6-digit recovery code & expiry (15 mins)
+    const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const resetExpires = Date.now() + 15 * 60 * 1000;
+
+    users[userIndex].resetCode = resetCode;
+    users[userIndex].resetExpires = resetExpires;
+
+    writeDB('users', users);
+
+    res.json({
+      message: '⚔️ Recovery code dispatched!',
+      resetCode, // Returned for instant demo testing
+      expiresIn: '15 minutes'
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── POST /api/auth/reset-password ────────────────────────────
+// Body: { email, resetCode, newPassword }
+router.post('/reset-password', async (req, res) => {
+  try {
+    const { email, resetCode, newPassword } = req.body;
+    if (!email || !resetCode || !newPassword) {
+      return res.status(400).json({ error: 'Email, reset code, and new password are required' });
+    }
+
+    if (newPassword.length < 4) {
+      return res.status(400).json({ error: 'Password must be at least 4 characters' });
+    }
+
+    const users = readDB('users');
+    const userIndex = users.findIndex(u => u.email.toLowerCase() === email.toLowerCase());
+
+    if (userIndex === -1) {
+      return res.status(404).json({ error: 'Account not found' });
+    }
+
+    const user = users[userIndex];
+
+    if (!user.resetCode || user.resetCode !== resetCode.trim()) {
+      return res.status(400).json({ error: 'Invalid recovery code' });
+    }
+
+    if (Date.now() > user.resetExpires) {
+      return res.status(400).json({ error: 'Recovery code has expired. Request a new one.' });
+    }
+
+    // Update password
+    const newHash = await bcrypt.hash(newPassword, 10);
+    users[userIndex].passwordHash = newHash;
+    delete users[userIndex].resetCode;
+    delete users[userIndex].resetExpires;
+
+    writeDB('users', users);
+
+    res.json({
+      message: '🔑 Password reset successfully! You can now log in.'
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;
+
