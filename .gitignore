@@ -10,8 +10,10 @@ npm-debug.log*
 # Environment (DO NOT COMMIT)
 .env
 
-# Data (optional — commit quizzes.json but not users.json)
+# Data (optional — commit quizzes.json but not users.json or runtime room state)
 data/users.json
+data/room_members.json
+data/study_rooms.json
 
 # Logs
 *.log

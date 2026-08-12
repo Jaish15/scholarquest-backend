@@ -10,9 +10,11 @@
    ============================================================ */
 
 require('dotenv').config();
-const express = require('express');
-const cors    = require('cors');
-const path    = require('path');
+const express  = require('express');
+const http     = require('http');
+const { Server } = require('socket.io');
+const cors     = require('cors');
+const path     = require('path');
 
 // ── Route Imports ─────────────────────────────────────────────
 const authRoutes        = require('./routes/auth');
@@ -20,10 +22,21 @@ const userRoutes        = require('./routes/user');
 const quizRoutes        = require('./routes/quiz');
 const habitRoutes       = require('./routes/habits');
 const leaderboardRoutes = require('./routes/leaderboard');
+const setupStudySyncSocket = require('./modules/studySyncSocket');
 
-// ── App Setup ─────────────────────────────────────────────────
-const app  = express();
+// ── App & HTTP Server Setup ───────────────────────────────────
+const app    = express();
+const server = http.createServer(app);
+const io     = new Server(server, {
+  cors: {
+    origin: process.env.FRONTEND_URL || '*',
+    methods: ['GET', 'POST']
+  }
+});
 const PORT = process.env.PORT || 3000;
+
+// Initialize StudySync Real-Time Socket Controller
+setupStudySyncSocket(io);
 
 // ── Middleware ────────────────────────────────────────────────
 app.use(cors({
@@ -38,7 +51,7 @@ app.use(express.urlencoded({ extended: true }));
 app.get('/', (req, res) => {
   res.json({
     status: 'ok',
-    message: '⚔️ ScholarQuest API is running!',
+    message: '⚔️ ScholarQuest API & StudySync Real-Time Sockets running!',
     version: '1.0.0',
     docs: 'See README.md for all endpoints'
   });
@@ -65,10 +78,10 @@ app.use((err, req, res, next) => {
 });
 
 // ── Start Server ──────────────────────────────────────────────
-app.listen(PORT, () => {
-  console.log(`\n⚔️  ScholarQuest API running at http://localhost:${PORT}`);
-  console.log(`📦  Storage: JSON files (data/*.json)`);
-  console.log(`🔄  TODO: Swap to MongoDB — see README.md\n`);
+server.listen(PORT, () => {
+  console.log(`\n⚔️  ScholarQuest API & Real-Time Sockets running at http://localhost:${PORT}`);
+  console.log(`📡  StudySync Socket.io Engine: ACTIVE`);
+  console.log(`📦  Storage: PostgreSQL / Persistent File Storage\n`);
 });
 
-module.exports = app;
+module.exports = server;
