@@ -1,0 +1,336 @@
+[
+  {
+    "id": "adcaca71-7ac8-4e79-b7ff-893e44d3c790",
+    "senderId": "c50c7c92-5547-488f-8118-048211d35020",
+    "recipientId": "a504d26e-fe1f-4ca0-ba61-17d6aa056519",
+    "text": "Hail DemoKnight! Here is the python code for the quest.",
+    "attachment": {
+      "url": "/uploads/dm/test_sample-1787036127665-419584414.py",
+      "originalName": "test_sample.py",
+      "fileName": "test_sample-1787036127665-419584414.py",
+      "fileType": "code",
+      "mimeType": "text/x-python",
+      "fileSize": 92
+    },
+    "timestamp": "2026-08-18T06:55:27.667Z",
+    "read": true
+  },
+  {
+    "id": "017d72cc-abe5-4cca-a143-342a33137a7f",
+    "senderId": "3d285efd-3eb5-4380-8715-83c8dd8d557c",
+    "recipientId": "80b28701-0012-4039-a429-1a7c787e2a53",
+    "text": "Greetings Scholar Beta! Ready for our algorithm quest?",
+    "attachment": null,
+    "timestamp": "2026-08-18T13:48:04.831Z",
+    "read": true
+  },
+  {
+    "id": "1346d4b7-d243-4491-9d8d-f697d40c4c55",
+    "senderId": "80b28701-0012-4039-a429-1a7c787e2a53",
+    "recipientId": "3d285efd-3eb5-4380-8715-83c8dd8d557c",
+    "text": "Hail Scholar Alpha! Indeed, I am ready. Sharing the solution code.",
+    "attachment": null,
+    "timestamp": "2026-08-18T13:48:05.433Z",
+    "read": true
+  },
+  {
+    "id": "d4f85c47-9fe4-464d-8965-5f21d9c1dd05",
+    "senderId": "3d285efd-3eb5-4380-8715-83c8dd8d557c",
+    "recipientId": "80b28701-0012-4039-a429-1a7c787e2a53",
+    "text": "Check out this dungeon solver script!",
+    "attachment": {
+      "url": "/uploads/dm/dungeon_solver-1787060886041-707206992.py",
+      "originalName": "dungeon_solver.py",
+      "fileName": "dungeon_solver-1787060886041-707206992.py",
+      "fileType": "code",
+      "mimeType": "text/x-python",
+      "fileSize": 80
+    },
+    "timestamp": "2026-08-18T13:48:06.043Z",
+    "read": true
+  },
+  {
+    "id": "3db66582-f913-4183-a333-4a0e0d0a23d0",
+    "senderId": "7a415687-3b45-44bd-af55-1f59e39bc020",
+    "recipientId": "d0b02033-c32d-4da8-afe1-aba900aa0b61",
+    "text": "Hi",
+    "attachment": null,
+    "timestamp": "2026-08-19T04:04:17.607Z",
+    "read": true
+  },
+  {
+    "id": "df2ab98a-4008-4b1c-9dbe-a2057528bdfd",
+    "senderId": "d0b02033-c32d-4da8-afe1-aba900aa0b61",
+    "recipientId": "7a415687-3b45-44bd-af55-1f59e39bc020",
+    "text": "hii",
+    "attachment": null,
+    "timestamp": "2026-08-19T04:04:25.819Z",
+    "read": true
+  },
+  {
+    "id": "60a3c445-788d-418d-9e55-9b8c4f5a9eb8",
+    "senderId": "d0b02033-c32d-4da8-afe1-aba900aa0b61",
+    "recipientId": "7a415687-3b45-44bd-af55-1f59e39bc020",
+    "text": "",
+    "attachment": {
+      "url": "/uploads/dm/landscape_poster_script-1787112280226-796373452.jpeg",
+      "originalName": "landscape poster script.jpeg",
+      "fileName": "landscape_poster_script-1787112280226-796373452.jpeg",
+      "fileType": "image",
+      "mimeType": "image/jpeg",
+      "fileSize": 167837
+    },
+    "timestamp": "2026-08-19T04:04:40.231Z",
+    "read": true
+  },
+  {
+    "id": "d4795df8-85b4-4fab-bc42-ff7417d599a3",
+    "senderId": "7a415687-3b45-44bd-af55-1f59e39bc020",
+    "recipientId": "a9ead7c8-4803-40e6-a4dd-271de6b63c22",
+    "text": "",
+    "attachment": {
+      "url": "/uploads/dm/Paysanne_The_witcher-1787123287317-642158364.jpeg",
+      "originalName": "Paysanne The witcher.jpeg",
+      "fileName": "Paysanne_The_witcher-1787123287317-642158364.jpeg",
+      "fileType": "image",
+      "mimeType": "image/jpeg",
+      "fileSize": 136023
+    },
+    "timestamp": "2026-08-19T07:08:07.322Z",
+    "read": true
+  },
+  {
+    "id": "867f6243-5fed-43fb-a09e-d625990feea3",
+    "senderId": "d0b02033-c32d-4da8-afe1-aba900aa0b61",
+    "recipientId": "a9ead7c8-4803-40e6-a4dd-271de6b63c22",
+    "text": "hiii",
+    "attachment": null,
+    "timestamp": "2026-08-19T07:09:25.777Z",
+    "read": true
+  },
+  {
+    "id": "e1e09d46-f568-4382-88ff-330e6d103a69",
+    "senderId": "d0b02033-c32d-4da8-afe1-aba900aa0b61",
+    "recipientId": "user_b_123",
+    "text": "⚔️ guru reminded you to battle in QuizForge!",
+    "attachment": null,
+    "timestamp": "2026-08-19T12:21:25.503Z",
+    "read": false
+  },
+  {
+    "id": "426aa9e6-b5dd-4f0f-8998-10fa6f9ca6ab",
+    "senderId": "d0b02033-c32d-4da8-afe1-aba900aa0b61",
+    "recipientId": "user_b_123",
+    "text": "⚔️ guru reminded you to battle in QuizForge!",
+    "attachment": null,
+    "timestamp": "2026-08-19T12:21:42.764Z",
+    "read": false
+  },
+  {
+    "id": "4d5f7380-f4f4-42e6-ad5d-92ac583da765",
+    "senderId": "7a415687-3b45-44bd-af55-1f59e39bc020",
+    "recipientId": "a9ead7c8-4803-40e6-a4dd-271de6b63c22",
+    "text": "⚔️ Jaishu reminded you to battle in QuizForge!",
+    "attachment": null,
+    "timestamp": "2026-08-19T12:25:19.036Z",
+    "read": true
+  },
+  {
+    "id": "000edaed-2626-4ae8-beca-93b18de8bcaf",
+    "senderId": "7a415687-3b45-44bd-af55-1f59e39bc020",
+    "recipientId": "a9ead7c8-4803-40e6-a4dd-271de6b63c22",
+    "text": "⚔️ Jaishu reminded you to battle in QuizForge!",
+    "attachment": null,
+    "timestamp": "2026-08-19T12:25:19.042Z",
+    "read": true
+  },
+  {
+    "id": "bedcd689-570d-4a19-84b9-81b5f2ffb2c7",
+    "senderId": "7a415687-3b45-44bd-af55-1f59e39bc020",
+    "recipientId": "a9ead7c8-4803-40e6-a4dd-271de6b63c22",
+    "text": "⚔️ Jaishu reminded you to battle in QuizForge!",
+    "attachment": null,
+    "timestamp": "2026-08-19T12:25:19.045Z",
+    "read": true
+  },
+  {
+    "id": "83b80526-e783-47a1-8dd8-9290a1539a75",
+    "senderId": "7a415687-3b45-44bd-af55-1f59e39bc020",
+    "recipientId": "a9ead7c8-4803-40e6-a4dd-271de6b63c22",
+    "text": "⚔️ Jaishu reminded you to battle in QuizForge!",
+    "attachment": null,
+    "timestamp": "2026-08-19T12:25:19.049Z",
+    "read": true
+  },
+  {
+    "id": "fb897735-b6bb-4825-a8a9-84fab892662c",
+    "senderId": "7a415687-3b45-44bd-af55-1f59e39bc020",
+    "recipientId": "a9ead7c8-4803-40e6-a4dd-271de6b63c22",
+    "text": "⚔️ Jaishu reminded you to battle in QuizForge!",
+    "attachment": null,
+    "timestamp": "2026-08-19T12:25:19.053Z",
+    "read": true
+  },
+  {
+    "id": "9db9666c-f298-4c90-8bfe-f43a19b71cb7",
+    "senderId": "7a415687-3b45-44bd-af55-1f59e39bc020",
+    "recipientId": "a9ead7c8-4803-40e6-a4dd-271de6b63c22",
+    "text": "⚔️ Jaishu reminded you to battle in QuizForge!",
+    "attachment": null,
+    "timestamp": "2026-08-19T12:25:19.054Z",
+    "read": true
+  },
+  {
+    "id": "2dceb54b-9e26-4d43-af4d-1bbfc1b60ae9",
+    "senderId": "7a415687-3b45-44bd-af55-1f59e39bc020",
+    "recipientId": "a9ead7c8-4803-40e6-a4dd-271de6b63c22",
+    "text": "⚔️ Jaishu reminded you to battle in QuizForge!",
+    "attachment": null,
+    "timestamp": "2026-08-19T12:25:19.056Z",
+    "read": true
+  },
+  {
+    "id": "a57eb184-cc94-4924-8175-7d6a91154e17",
+    "senderId": "7a415687-3b45-44bd-af55-1f59e39bc020",
+    "recipientId": "a9ead7c8-4803-40e6-a4dd-271de6b63c22",
+    "text": "⚔️ Jaishu reminded you to battle in QuizForge!",
+    "attachment": null,
+    "timestamp": "2026-08-19T12:25:19.058Z",
+    "read": true
+  },
+  {
+    "id": "6663aeb0-f5e3-44e1-85d9-e27e1e5e854e",
+    "senderId": "7a415687-3b45-44bd-af55-1f59e39bc020",
+    "recipientId": "d0b02033-c32d-4da8-afe1-aba900aa0b61",
+    "text": "⚔️ Jaishu reminded you to battle in QuizForge!",
+    "attachment": null,
+    "timestamp": "2026-08-19T12:43:28.412Z",
+    "read": true
+  },
+  {
+    "id": "c93071f7-8c92-443f-894b-d82ae7d58929",
+    "senderId": "7a415687-3b45-44bd-af55-1f59e39bc020",
+    "recipientId": "d0b02033-c32d-4da8-afe1-aba900aa0b61",
+    "text": "⚔️ Jaishu reminded you to battle in QuizForge!",
+    "attachment": null,
+    "timestamp": "2026-08-19T12:43:28.415Z",
+    "read": true
+  },
+  {
+    "id": "6b021262-3337-4813-b197-9dbd53519117",
+    "senderId": "7a415687-3b45-44bd-af55-1f59e39bc020",
+    "recipientId": "d0b02033-c32d-4da8-afe1-aba900aa0b61",
+    "text": "⚔️ Jaishu reminded you to battle in QuizForge!",
+    "attachment": null,
+    "timestamp": "2026-08-19T12:43:28.416Z",
+    "read": true
+  },
+  {
+    "id": "c80e91da-8566-4310-b976-93e1c16b7ca9",
+    "senderId": "7a415687-3b45-44bd-af55-1f59e39bc020",
+    "recipientId": "d0b02033-c32d-4da8-afe1-aba900aa0b61",
+    "text": "⚔️ Jaishu reminded you to battle in QuizForge!",
+    "attachment": null,
+    "timestamp": "2026-08-19T12:43:28.416Z",
+    "read": true
+  },
+  {
+    "id": "4dd61114-640d-4244-8a56-82555c7b510d",
+    "senderId": "7a415687-3b45-44bd-af55-1f59e39bc020",
+    "recipientId": "d0b02033-c32d-4da8-afe1-aba900aa0b61",
+    "text": "⚔️ Jaishu reminded you to battle in QuizForge!",
+    "attachment": null,
+    "timestamp": "2026-08-19T12:43:28.417Z",
+    "read": true
+  },
+  {
+    "id": "2c50dd37-7dff-4549-abcf-30cfc5843407",
+    "senderId": "7a415687-3b45-44bd-af55-1f59e39bc020",
+    "recipientId": "d0b02033-c32d-4da8-afe1-aba900aa0b61",
+    "text": "⚔️ Jaishu reminded you to battle in QuizForge!",
+    "attachment": null,
+    "timestamp": "2026-08-19T12:43:28.417Z",
+    "read": true
+  },
+  {
+    "id": "f1c7f37a-df5c-4fd2-92e9-3dc9efb6f6e1",
+    "senderId": "d0b02033-c32d-4da8-afe1-aba900aa0b61",
+    "recipientId": "7a415687-3b45-44bd-af55-1f59e39bc020",
+    "text": "⚔️ guru reminded you to battle in QuizForge!",
+    "attachment": null,
+    "timestamp": "2026-08-19T12:44:56.917Z",
+    "read": true
+  },
+  {
+    "id": "460114b6-3e1c-4b3e-806f-51d5129bf1fe",
+    "senderId": "d0b02033-c32d-4da8-afe1-aba900aa0b61",
+    "recipientId": "7a415687-3b45-44bd-af55-1f59e39bc020",
+    "text": "⚔️ guru reminded you to battle in QuizForge!",
+    "attachment": null,
+    "timestamp": "2026-08-19T12:44:56.918Z",
+    "read": true
+  },
+  {
+    "id": "3fcc1481-e7ba-4398-830d-64019b974f69",
+    "senderId": "d0b02033-c32d-4da8-afe1-aba900aa0b61",
+    "recipientId": "7a415687-3b45-44bd-af55-1f59e39bc020",
+    "text": "⚔️ guru reminded you to battle in QuizForge!",
+    "attachment": null,
+    "timestamp": "2026-08-19T12:44:56.918Z",
+    "read": true
+  },
+  {
+    "id": "057cbf44-25ce-430c-b0e1-bc0ced06ac08",
+    "senderId": "d0b02033-c32d-4da8-afe1-aba900aa0b61",
+    "recipientId": "7a415687-3b45-44bd-af55-1f59e39bc020",
+    "text": "⚔️ guru reminded you to battle in QuizForge!",
+    "attachment": null,
+    "timestamp": "2026-08-19T12:44:56.919Z",
+    "read": true
+  },
+  {
+    "id": "d88880f4-c2f0-4694-8088-1d13ba1c15ee",
+    "senderId": "d0b02033-c32d-4da8-afe1-aba900aa0b61",
+    "recipientId": "7a415687-3b45-44bd-af55-1f59e39bc020",
+    "text": "⚔️ guru reminded you to battle in QuizForge!",
+    "attachment": null,
+    "timestamp": "2026-08-19T12:44:56.919Z",
+    "read": true
+  },
+  {
+    "id": "e1a62f34-0898-4f5a-9ea9-b9470bc5cf05",
+    "senderId": "d0b02033-c32d-4da8-afe1-aba900aa0b61",
+    "recipientId": "7a415687-3b45-44bd-af55-1f59e39bc020",
+    "text": "⚔️ guru reminded you to battle in QuizForge!",
+    "attachment": null,
+    "timestamp": "2026-08-19T12:44:56.919Z",
+    "read": true
+  },
+  {
+    "id": "f3466087-5566-4b02-8608-7770602fca8e",
+    "senderId": "7a415687-3b45-44bd-af55-1f59e39bc020",
+    "recipientId": "d0b02033-c32d-4da8-afe1-aba900aa0b61",
+    "text": "⚔️ Jaishu reminded you to battle in QuizForge!",
+    "attachment": null,
+    "timestamp": "2026-08-19T13:58:32.580Z",
+    "read": true
+  },
+  {
+    "id": "f8565635-4600-4e07-a93c-83ea18b2da33",
+    "senderId": "29227c87-f639-47b1-a831-9ddaa59ebd23",
+    "recipientId": "friend_123",
+    "text": "⚔️ ScholarQuest Challenge Share!\nCheck out this challenge in CodeScroll: [Python - Beginner] 1. Sum of Two Numbers\n👉 Open Quest: http://localhost:8086/?view=codescroll&domain=Python&difficulty=Beginner&challengeIndex=0",
+    "attachment": null,
+    "timestamp": "2026-08-23T12:56:16.120Z",
+    "read": false
+  },
+  {
+    "id": "c36a6b4c-39f3-44f8-8fb5-44d24a73485b",
+    "senderId": "a9ead7c8-4803-40e6-a4dd-271de6b63c22",
+    "recipientId": "7a415687-3b45-44bd-af55-1f59e39bc020",
+    "text": "⚔️ ScholarQuest Challenge Share!\nCheck out this challenge in CodeScroll: [Python - Beginner] 1. Square Number Calculator\n👉 Open Quest: http://localhost:8086/?view=codescroll&domain=Python&difficulty=Beginner&challengeIndex=0",
+    "attachment": null,
+    "timestamp": "2026-08-23T14:50:20.930Z",
+    "read": false
+  }
+]

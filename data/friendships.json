@@ -1,0 +1,82 @@
+[
+  {
+    "id": "fd70fffb-b7f4-4278-bb59-0e70971403e7",
+    "requesterId": "c50c7c92-5547-488f-8118-048211d35020",
+    "recipientId": "a504d26e-fe1f-4ca0-ba61-17d6aa056519",
+    "status": "accepted",
+    "createdAt": "2026-08-18T06:55:27.656Z",
+    "updatedAt": "2026-08-18T06:55:27.659Z"
+  },
+  {
+    "id": "d19de72c-8f98-49c5-b8df-85c27d753a5b",
+    "requesterId": "3d285efd-3eb5-4380-8715-83c8dd8d557c",
+    "recipientId": "80b28701-0012-4039-a429-1a7c787e2a53",
+    "status": "accepted",
+    "createdAt": "2026-08-18T13:48:03.624Z",
+    "updatedAt": "2026-08-18T13:48:04.227Z"
+  },
+  {
+    "id": "865a56a3-b9ad-486f-8e77-53904f6ddc69",
+    "requesterId": "bf76d9e9-89f0-48a8-8cbd-ae083cb4e1ba",
+    "recipientId": "eda252b5-81c0-44aa-8531-374126b96009",
+    "status": "pending",
+    "createdAt": "2026-08-19T03:04:41.456Z",
+    "updatedAt": "2026-08-19T03:04:41.456Z"
+  },
+  {
+    "id": "e858552a-7383-498d-ae86-960a8eb510f2",
+    "requesterId": "4d555cc3-73bb-4c2d-bc9b-f22c6f4722e0",
+    "recipientId": "eda252b5-81c0-44aa-8531-374126b96009",
+    "status": "pending",
+    "createdAt": "2026-08-19T03:05:07.529Z",
+    "updatedAt": "2026-08-19T03:05:07.529Z"
+  },
+  {
+    "id": "4066efc9-0f00-4d5b-b6fd-af103af0b341",
+    "requesterId": "e7b189dd-c78f-48a1-a6be-1df31f5c4715",
+    "recipientId": "eda252b5-81c0-44aa-8531-374126b96009",
+    "status": "pending",
+    "createdAt": "2026-08-19T03:17:29.639Z",
+    "updatedAt": "2026-08-19T03:17:29.639Z"
+  },
+  {
+    "id": "e465788d-66ed-4357-9438-d80cba38274e",
+    "requesterId": "55ab905a-bd59-4c9d-aac0-a04601d04ea0",
+    "recipientId": "eda252b5-81c0-44aa-8531-374126b96009",
+    "status": "pending",
+    "createdAt": "2026-08-19T03:30:37.463Z",
+    "updatedAt": "2026-08-19T03:30:37.463Z"
+  },
+  {
+    "id": "b2fa4036-b1ce-4895-88e2-818b3d3d2364",
+    "requesterId": "86b0c575-7fb4-4210-addd-4c10fd11636d",
+    "recipientId": "eda252b5-81c0-44aa-8531-374126b96009",
+    "status": "pending",
+    "createdAt": "2026-08-19T03:49:37.545Z",
+    "updatedAt": "2026-08-19T03:49:37.545Z"
+  },
+  {
+    "id": "d633c9e0-19ff-4647-a9d2-f6eead9ed2ef",
+    "requesterId": "d0b02033-c32d-4da8-afe1-aba900aa0b61",
+    "recipientId": "7a415687-3b45-44bd-af55-1f59e39bc020",
+    "status": "accepted",
+    "createdAt": "2026-08-19T04:03:52.835Z",
+    "updatedAt": "2026-08-19T04:04:10.636Z"
+  },
+  {
+    "id": "99f3bb75-70eb-448b-9edc-bd023b6e8ece",
+    "requesterId": "a9ead7c8-4803-40e6-a4dd-271de6b63c22",
+    "recipientId": "d0b02033-c32d-4da8-afe1-aba900aa0b61",
+    "status": "accepted",
+    "createdAt": "2026-08-19T06:32:01.392Z",
+    "updatedAt": "2026-08-19T06:32:08.660Z"
+  },
+  {
+    "id": "b59912b1-3ef9-44c1-82cf-65d511aaccbd",
+    "requesterId": "a9ead7c8-4803-40e6-a4dd-271de6b63c22",
+    "recipientId": "7a415687-3b45-44bd-af55-1f59e39bc020",
+    "status": "accepted",
+    "createdAt": "2026-08-19T07:06:43.725Z",
+    "updatedAt": "2026-08-19T07:07:07.477Z"
+  }
+]

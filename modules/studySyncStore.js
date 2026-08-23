@@ -1,5 +1,5 @@
 /* ============================================================
-   ScholarQuest — StudySync Real-Time Persistence Store
+   ScholarQuest — Friends & Direct Messages Persistence Store
    Database abstraction layer supporting PostgreSQL & JSON storage
    ============================================================ */
 
@@ -9,8 +9,9 @@ const path = require('path');
 const { v4: uuidv4 } = require('uuid');
 
 const DATA_DIR = path.join(__dirname, '..', 'data');
-const ROOMS_FILE = path.join(DATA_DIR, 'study_rooms.json');
-const MEMBERS_FILE = path.join(DATA_DIR, 'room_members.json');
+const FRIENDSHIPS_FILE = path.join(DATA_DIR, 'friendships.json');
+const MESSAGES_FILE = path.join(DATA_DIR, 'direct_messages.json');
+const USERS_FILE = path.join(DATA_DIR, 'users.json');
 
 // Initialize PostgreSQL Pool if DATABASE_URL is configured
 let pgPool = null;
@@ -31,28 +32,26 @@ async function initPgTables() {
   if (!pgPool) return;
   try {
     await pgPool.query(`
-      CREATE TABLE IF NOT EXISTS study_rooms (
+      CREATE TABLE IF NOT EXISTS friendships (
         id VARCHAR(64) PRIMARY KEY,
-        join_code VARCHAR(6) UNIQUE NOT NULL,
-        host_user_id VARCHAR(64) NOT NULL,
+        requester_id VARCHAR(64) NOT NULL,
+        recipient_id VARCHAR(64) NOT NULL,
+        status VARCHAR(20) DEFAULT 'pending',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        status VARCHAR(20) DEFAULT 'active',
-        current_activity VARCHAR(32) DEFAULT 'idle',
-        current_question_id VARCHAR(64)
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(requester_id, recipient_id)
       );
-      CREATE TABLE IF NOT EXISTS room_members (
-        room_id VARCHAR(64) NOT NULL,
-        user_id VARCHAR(64) NOT NULL,
-        username VARCHAR(64) NOT NULL,
-        avatar VARCHAR(64) DEFAULT 'peasant',
-        joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        is_connected BOOLEAN DEFAULT true,
-        score INT DEFAULT 0,
-        disconnected_at TIMESTAMP,
-        PRIMARY KEY (room_id, user_id)
+      CREATE TABLE IF NOT EXISTS direct_messages (
+        id VARCHAR(64) PRIMARY KEY,
+        sender_id VARCHAR(64) NOT NULL,
+        recipient_id VARCHAR(64) NOT NULL,
+        text TEXT DEFAULT '',
+        attachment JSONB DEFAULT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        read BOOLEAN DEFAULT false
       );
     `);
-    console.log('[DB] PostgreSQL StudySync tables initialized successfully.');
+    console.log('[DB] PostgreSQL Friends & DM tables initialized successfully.');
   } catch (err) {
     console.error('[DB ERROR] PostgreSQL table init failed:', err.message);
   }
@@ -72,297 +71,319 @@ function writeJSON(file, data) {
   fs.writeFileSync(file, JSON.stringify(data, null, 2), 'utf8');
 }
 
-// ── Unique 6-Character Join Code Generator ──────────────────────────────────
-function generateJoinCode() {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Exclude ambiguous chars like I, O, 0, 1
-  let code = '';
-  for (let i = 0; i < 6; i++) {
-    code += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return code;
+function getUsers() {
+  return readJSON(USERS_FILE);
 }
 
-// ── Store Operations ────────────────────────────────────────────────────────
-async function createRoom(hostUserId, username, avatar = 'peasant') {
-  let joinCode = generateJoinCode();
-  let attempts = 0;
-  
-  // Ensure unique code
-  while (await getRoomByCode(joinCode)) {
-    joinCode = generateJoinCode();
-    attempts++;
-    if (attempts > 100) break;
-  }
+function getUserById(userId) {
+  const users = getUsers();
+  const user = users.find(u => u.id === userId);
+  if (!user) return null;
+  const { passwordHash, ...safeUser } = user;
+  return safeUser;
+}
 
-  const roomId = uuidv4();
-  const createdAt = new Date().toISOString();
+// ── Friendship Store Operations ─────────────────────────────────────────────
 
+async function getFriendshipBetween(user1Id, user2Id) {
   if (pgPool) {
-    await pgPool.query(
-      `INSERT INTO study_rooms (id, join_code, host_user_id, status, current_activity, created_at)
-       VALUES ($1, $2, $3, 'active', 'idle', $4)`,
-      [roomId, joinCode, hostUserId, createdAt]
+    const res = await pgPool.query(
+      `SELECT * FROM friendships 
+        WHERE (requester_id = $1 AND recipient_id = $2) 
+           OR (requester_id = $2 AND recipient_id = $1)
+        LIMIT 1`,
+      [user1Id, user2Id]
     );
-    await pgPool.query(
-      `INSERT INTO room_members (room_id, user_id, username, avatar, joined_at, is_connected, score)
-       VALUES ($1, $2, $3, $4, $5, true, 0)`,
-      [roomId, hostUserId, username, avatar, createdAt]
-    );
-  } else {
-    const rooms = readJSON(ROOMS_FILE);
-    const members = readJSON(MEMBERS_FILE);
-
-    const newRoom = {
-      id: roomId,
-      join_code: joinCode,
-      host_user_id: hostUserId,
-      status: 'active',
-      current_activity: 'idle',
-      current_question_id: null,
-      created_at: createdAt
-    };
-
-    const newMember = {
-      room_id: roomId,
-      user_id: hostUserId,
-      username: username,
-      avatar: avatar,
-      joined_at: createdAt,
-      is_connected: true,
-      score: 0,
-      disconnected_at: null
-    };
-
-    rooms.push(newRoom);
-    members.push(newMember);
-
-    writeJSON(ROOMS_FILE, rooms);
-    writeJSON(MEMBERS_FILE, members);
-  }
-
-  return { id: roomId, join_code: joinCode, host_user_id: hostUserId };
-}
-
-async function getRoomByCode(joinCode) {
-  const cleanCode = (joinCode || '').trim().toUpperCase();
-  if (!cleanCode) return null;
-
-  if (pgPool) {
-    const res = await pgPool.query(`SELECT * FROM study_rooms WHERE join_code = $1 AND status = 'active'`, [cleanCode]);
     return res.rows[0] || null;
-  } else {
-    const rooms = readJSON(ROOMS_FILE);
-    return rooms.find(r => r.join_code === cleanCode && r.status === 'active') || null;
   }
+
+  const list = readJSON(FRIENDSHIPS_FILE);
+  return list.find(f => 
+    (f.requesterId === user1Id && f.recipientId === user2Id) ||
+    (f.requesterId === user2Id && f.recipientId === user1Id)
+  ) || null;
 }
 
-async function getRoomById(roomId) {
-  if (pgPool) {
-    const res = await pgPool.query(`SELECT * FROM study_rooms WHERE id = $1`, [roomId]);
-    return res.rows[0] || null;
-  } else {
-    const rooms = readJSON(ROOMS_FILE);
-    return rooms.find(r => r.id === roomId) || null;
+async function sendFriendRequest(requesterId, recipientId) {
+  if (requesterId === recipientId) {
+    throw new Error('You cannot send a friend request to yourself.');
   }
-}
 
-async function getActiveMemberCount(roomId) {
-  const members = await getRoomMembers(roomId);
-  const now = Date.now();
-  // Count connected members or members disconnected within last 60 seconds
-  const activeMembers = members.filter(m => {
-    if (m.is_connected) return true;
-    if (m.disconnected_at) {
-      const discTime = new Date(m.disconnected_at).getTime();
-      return (now - discTime) < 60000;
-    }
-    return false;
-  });
-  return activeMembers.length;
-}
-
-async function getRoomMembers(roomId) {
-  if (pgPool) {
-    const res = await pgPool.query(`SELECT * FROM room_members WHERE room_id = $1 ORDER BY joined_at ASC`, [roomId]);
-    return res.rows;
-  } else {
-    const members = readJSON(MEMBERS_FILE);
-    return members.filter(m => m.room_id === roomId);
-  }
-}
-
-async function addOrUpdateMember(roomId, userId, username, avatar) {
+  const existing = await getFriendshipBetween(requesterId, recipientId);
   const now = new Date().toISOString();
-  if (pgPool) {
-    await pgPool.query(`
-      INSERT INTO room_members (room_id, user_id, username, avatar, joined_at, is_connected, score, disconnected_at)
-      VALUES ($1, $2, $3, $4, $5, true, 0, NULL)
-      ON CONFLICT (room_id, user_id) DO UPDATE
-      SET username = $3, avatar = $4, is_connected = true, disconnected_at = NULL
-    `, [roomId, userId, username, avatar, now]);
-  } else {
-    const members = readJSON(MEMBERS_FILE);
-    const existingIdx = members.findIndex(m => m.room_id === roomId && m.user_id === userId);
-    if (existingIdx >= 0) {
-      members[existingIdx].username = username;
-      members[existingIdx].avatar = avatar;
-      members[existingIdx].is_connected = true;
-      members[existingIdx].disconnected_at = null;
-    } else {
-      members.push({
-        room_id: roomId,
-        user_id: userId,
-        username: username,
-        avatar: avatar,
-        joined_at: now,
-        is_connected: true,
-        score: 0,
-        disconnected_at: null
-      });
+
+  if (existing) {
+    const reqId = existing.requesterId || existing.requester_id;
+    if (existing.status === 'accepted') {
+      throw new Error('You are already friends with this scholar.');
     }
-    writeJSON(MEMBERS_FILE, members);
-  }
-}
-
-async function setMemberConnectionState(roomId, userId, isConnected) {
-  const discAt = isConnected ? null : new Date().toISOString();
-  if (pgPool) {
-    await pgPool.query(
-      `UPDATE room_members SET is_connected = $1, disconnected_at = $2 WHERE room_id = $3 AND user_id = $4`,
-      [isConnected, discAt, roomId, userId]
-    );
-  } else {
-    const members = readJSON(MEMBERS_FILE);
-    const m = members.find(mem => mem.room_id === roomId && mem.user_id === userId);
-    if (m) {
-      m.is_connected = isConnected;
-      m.disconnected_at = discAt;
-      writeJSON(MEMBERS_FILE, members);
-    }
-  }
-}
-
-async function updateMemberScore(roomId, userId, pointsToAdd) {
-  if (pgPool) {
-    await pgPool.query(
-      `UPDATE room_members SET score = score + $1 WHERE room_id = $2 AND user_id = $3`,
-      [pointsToAdd, roomId, userId]
-    );
-  } else {
-    const members = readJSON(MEMBERS_FILE);
-    const m = members.find(mem => mem.room_id === roomId && mem.user_id === userId);
-    if (m) {
-      m.score = (m.score || 0) + pointsToAdd;
-      writeJSON(MEMBERS_FILE, members);
-    }
-  }
-}
-
-async function setRoomActivity(roomId, currentActivity, currentQuestionId = null) {
-  if (pgPool) {
-    await pgPool.query(
-      `UPDATE study_rooms SET current_activity = $1, current_question_id = $2 WHERE id = $3`,
-      [currentActivity, currentQuestionId, roomId]
-    );
-  } else {
-    const rooms = readJSON(ROOMS_FILE);
-    const r = rooms.find(room => room.id === roomId);
-    if (r) {
-      r.current_activity = currentActivity;
-      r.current_question_id = currentQuestionId;
-      writeJSON(ROOMS_FILE, rooms);
-    }
-  }
-}
-
-async function removeMember(roomId, userId) {
-  if (pgPool) {
-    await pgPool.query(`DELETE FROM room_members WHERE room_id = $1 AND user_id = $2`, [roomId, userId]);
-  } else {
-    let members = readJSON(MEMBERS_FILE);
-    members = members.filter(m => !(m.room_id === roomId && m.user_id === userId));
-    writeJSON(MEMBERS_FILE, members);
-  }
-}
-
-async function purgeExpiredDisconnectedMembers(roomId, graceMs = 60000) {
-  const members = await getRoomMembers(roomId);
-  const now = Date.now();
-  const expired = [];
-
-  for (const m of members) {
-    if (!m.is_connected && m.disconnected_at) {
-      const discTime = new Date(m.disconnected_at).getTime();
-      if (now - discTime >= graceMs) {
-        expired.push(m.user_id);
+    if (existing.status === 'pending') {
+      if (reqId === requesterId) {
+        throw new Error('Friend request already sent.');
+      } else {
+        // Automatically accept if the other person already sent a pending request
+        return await respondFriendRequest(existing.id, requesterId, 'accept');
       }
     }
-  }
-
-  for (const uid of expired) {
-    await removeMember(roomId, uid);
-  }
-
-  return expired;
-}
-
-// ── Host Disconnect Auto-Promotion ──────────────────────────────────────────
-/* Code Comment Note: If the room host disconnects and does not return within 60s,
-   the server auto-promotes the next-longest-connected active member to host so the room stays active. */
-async function promoteNextHostIfNeeded(roomId) {
-  const room = await getRoomById(roomId);
-  if (!room) return null;
-
-  const members = await getRoomMembers(roomId);
-  const hostMember = members.find(m => m.user_id === room.host_user_id);
-
-  // If host is connected or within grace window, no promotion needed
-  if (hostMember && hostMember.is_connected) {
-    return room.host_user_id;
-  }
-
-  // Find next connected member ordered by joined_at
-  const connectedMembers = members.filter(m => m.is_connected);
-  if (connectedMembers.length > 0) {
-    const newHost = connectedMembers[0].user_id;
+    // If declined, re-open request
     if (pgPool) {
-      await pgPool.query(`UPDATE study_rooms SET host_user_id = $1 WHERE id = $2`, [newHost, roomId]);
+      const res = await pgPool.query(
+        `UPDATE friendships SET requester_id = $1, recipient_id = $2, status = 'pending', updated_at = $3 WHERE id = $4 RETURNING *`,
+        [requesterId, recipientId, now, existing.id]
+      );
+      return res.rows[0];
     } else {
-      const rooms = readJSON(ROOMS_FILE);
-      const r = rooms.find(room => room.id === roomId);
-      if (r) {
-        r.host_user_id = newHost;
-        writeJSON(ROOMS_FILE, rooms);
+      const list = readJSON(FRIENDSHIPS_FILE);
+      const idx = list.findIndex(f => f.id === existing.id);
+      if (idx !== -1) {
+        list[idx].requesterId = requesterId;
+        list[idx].recipientId = recipientId;
+        list[idx].status = 'pending';
+        list[idx].updatedAt = now;
+        writeJSON(FRIENDSHIPS_FILE, list);
+        return list[idx];
       }
     }
-    return newHost;
   }
 
-  // If zero connected members left, mark room closed
+  const newFriendship = {
+    id: uuidv4(),
+    requesterId,
+    recipientId,
+    status: 'pending',
+    createdAt: now,
+    updatedAt: now
+  };
+
   if (pgPool) {
-    await pgPool.query(`UPDATE study_rooms SET status = 'closed' WHERE id = $1`, [roomId]);
+    const res = await pgPool.query(
+      `INSERT INTO friendships (id, requester_id, recipient_id, status, created_at, updated_at)
+        VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+      [newFriendship.id, requesterId, recipientId, 'pending', now, now]
+    );
+    return res.rows[0];
   } else {
-    const rooms = readJSON(ROOMS_FILE);
-    const r = rooms.find(room => room.id === roomId);
-    if (r) {
-      r.status = 'closed';
-      writeJSON(ROOMS_FILE, rooms);
-    }
+    const list = readJSON(FRIENDSHIPS_FILE);
+    list.push(newFriendship);
+    writeJSON(FRIENDSHIPS_FILE, list);
+    return newFriendship;
   }
-  return null;
+}
+
+async function respondFriendRequest(requestId, recipientId, action) {
+  const status = action === 'accept' ? 'accepted' : 'declined';
+  const now = new Date().toISOString();
+
+  if (pgPool) {
+    const res = await pgPool.query(
+      `UPDATE friendships 
+        SET status = $1, updated_at = $2 
+        WHERE id = $3 AND (recipient_id = $4 OR requester_id = $4) 
+        RETURNING *`,
+      [status, now, requestId, recipientId]
+    );
+    if (!res.rows.length) throw new Error('Friend request not found or unauthorized.');
+    return res.rows[0];
+  } else {
+    const list = readJSON(FRIENDSHIPS_FILE);
+    const idx = list.findIndex(f => f.id === requestId && (f.recipientId === recipientId || f.requesterId === recipientId));
+    if (idx === -1) throw new Error('Friend request not found or unauthorized.');
+    list[idx].status = status;
+    list[idx].updatedAt = now;
+    writeJSON(FRIENDSHIPS_FILE, list);
+    return list[idx];
+  }
+}
+
+async function getPendingRequests(userId) {
+  let incoming = [];
+  let outgoing = [];
+
+  if (pgPool) {
+    const inRes = await pgPool.query(
+      `SELECT * FROM friendships WHERE recipient_id = $1 AND status = 'pending' ORDER BY created_at DESC`,
+      [userId]
+    );
+    const outRes = await pgPool.query(
+      `SELECT * FROM friendships WHERE requester_id = $1 AND status = 'pending' ORDER BY created_at DESC`,
+      [userId]
+    );
+    incoming = inRes.rows;
+    outgoing = outRes.rows;
+  } else {
+    const list = readJSON(FRIENDSHIPS_FILE);
+    incoming = list.filter(f => f.recipientId === userId && f.status === 'pending');
+    outgoing = list.filter(f => f.requesterId === userId && f.status === 'pending');
+  }
+
+  // Augment incoming with requester user profiles
+  const augmentedIncoming = incoming.map(req => {
+    const requesterId = req.requesterId || req.requester_id;
+    const user = getUserById(requesterId);
+    return {
+      id: req.id,
+      requesterId,
+      recipientId: req.recipientId || req.recipient_id,
+      createdAt: req.createdAt || req.created_at,
+      status: req.status,
+      user: user ? {
+        id: user.id,
+        username: user.username,
+        level: user.level || 1,
+        avatar: user.avatar || { id: 'peasant' },
+        stats: user.stats || {}
+      } : { id: requesterId, username: 'Unknown Scholar', level: 1, avatar: { id: 'peasant' } }
+    };
+  });
+
+  return { incoming: augmentedIncoming, outgoing };
+}
+
+async function getFriendsList(userId, onlineUserIds = new Set()) {
+  let friendships = [];
+
+  if (pgPool) {
+    const res = await pgPool.query(
+      `SELECT * FROM friendships 
+        WHERE (requester_id = $1 OR recipient_id = $1) AND status = 'accepted'`,
+      [userId]
+    );
+    friendships = res.rows;
+  } else {
+    const list = readJSON(FRIENDSHIPS_FILE);
+    friendships = list.filter(f => (f.requesterId === userId || f.recipientId === userId) && f.status === 'accepted');
+  }
+
+  const messages = readJSON(MESSAGES_FILE);
+
+  const friends = friendships.map(f => {
+    const reqId = f.requesterId || f.requester_id;
+    const recId = f.recipientId || f.recipient_id;
+    const friendId = reqId === userId ? recId : reqId;
+    const user = getUserById(friendId);
+
+    // Find last message between userId and friendId
+    const threadMsgs = messages.filter(m => 
+      (m.senderId === userId && m.recipientId === friendId) ||
+      (m.senderId === friendId && m.recipientId === userId)
+    );
+    const lastMsg = threadMsgs.length ? threadMsgs[threadMsgs.length - 1] : null;
+    const unreadCount = threadMsgs.filter(m => m.senderId === friendId && m.recipientId === userId && !m.read).length;
+
+    return {
+      id: friendId,
+      friendshipId: f.id,
+      username: user ? user.username : 'Scholar',
+      email: user ? user.email : '',
+      level: user ? user.level || 1 : 1,
+      avatar: user ? user.avatar || { id: 'peasant' } : { id: 'peasant' },
+      stats: user ? user.stats || {} : {},
+      online: onlineUserIds.has(friendId),
+      lastMessage: lastMsg ? {
+        text: lastMsg.text || (lastMsg.attachment ? ('📎 ' + (lastMsg.attachment.originalName || 'Attachment')) : ''),
+        timestamp: lastMsg.timestamp || lastMsg.created_at,
+        senderId: lastMsg.senderId || lastMsg.sender_id
+      } : null,
+      unreadCount
+    };
+  });
+
+  // Sort friends: online first, then by last message time or username
+  friends.sort((a, b) => {
+    if (a.online !== b.online) return a.online ? -1 : 1;
+    const timeA = a.lastMessage ? new Date(a.lastMessage.timestamp).getTime() : 0;
+    const timeB = b.lastMessage ? new Date(b.lastMessage.timestamp).getTime() : 0;
+    if (timeA !== timeB) return timeB - timeA;
+    return a.username.localeCompare(b.username);
+  });
+
+  return friends;
+}
+
+// ── Direct Message Store Operations ─────────────────────────────────────────
+
+async function saveDirectMessage(senderId, recipientId, text = '', attachment = null) {
+  const now = new Date().toISOString();
+  const newMsg = {
+    id: uuidv4(),
+    senderId,
+    recipientId,
+    text: text ? text.trim() : '',
+    attachment: attachment || null,
+    timestamp: now,
+    read: false
+  };
+
+  if (pgPool) {
+    const res = await pgPool.query(
+      `INSERT INTO direct_messages (id, sender_id, recipient_id, text, attachment, created_at, read)
+        VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+      [newMsg.id, senderId, recipientId, newMsg.text, JSON.stringify(attachment), now, false]
+    );
+    return res.rows[0];
+  } else {
+    const list = readJSON(MESSAGES_FILE);
+    list.push(newMsg);
+    writeJSON(MESSAGES_FILE, list);
+    return newMsg;
+  }
+}
+
+async function getDirectMessages(user1Id, user2Id) {
+  if (pgPool) {
+    const res = await pgPool.query(
+      `SELECT * FROM direct_messages 
+        WHERE (sender_id = $1 AND recipient_id = $2) 
+           OR (sender_id = $2 AND recipient_id = $1)
+        ORDER BY created_at ASC`,
+      [user1Id, user2Id]
+    );
+    return res.rows.map(r => ({
+      id: r.id,
+      senderId: r.sender_id,
+      recipientId: r.recipient_id,
+      text: r.text,
+      attachment: r.attachment,
+      timestamp: r.created_at,
+      read: r.read
+    }));
+  }
+
+  const list = readJSON(MESSAGES_FILE);
+  return list.filter(m => 
+    (m.senderId === user1Id && m.recipientId === user2Id) ||
+    (m.senderId === user2Id && m.recipientId === user1Id)
+  ).sort((a, b) => new Date(a.timestamp || a.created_at) - new Date(b.timestamp || b.created_at));
+}
+
+async function markMessagesAsRead(currentUserId, friendId) {
+  if (pgPool) {
+    await pgPool.query(
+      `UPDATE direct_messages SET read = true 
+        WHERE sender_id = $1 AND recipient_id = $2 AND read = false`,
+      [friendId, currentUserId]
+    );
+  } else {
+    const list = readJSON(MESSAGES_FILE);
+    let changed = false;
+    list.forEach(m => {
+      if (m.senderId === friendId && m.recipientId === currentUserId && !m.read) {
+        m.read = true;
+        changed = true;
+      }
+    });
+    if (changed) writeJSON(MESSAGES_FILE, list);
+  }
 }
 
 module.exports = {
-  createRoom,
-  getRoomByCode,
-  getRoomById,
-  getActiveMemberCount,
-  getRoomMembers,
-  addOrUpdateMember,
-  setMemberConnectionState,
-  updateMemberScore,
-  setRoomActivity,
-  removeMember,
-  purgeExpiredDisconnectedMembers,
-  promoteNextHostIfNeeded
+  getUserById,
+  getFriendshipBetween,
+  sendFriendRequest,
+  respondFriendRequest,
+  getPendingRequests,
+  getFriendsList,
+  saveDirectMessage,
+  getDirectMessages,
+  markMessagesAsRead
 };

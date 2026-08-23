@@ -14,9 +14,6 @@ const router = express.Router();
 // Returns top 10 users sorted by level desc, then xp desc
 router.get('/', (req, res) => {
   try {
-    // TODO (MongoDB):
-    // User.find({}).select('username level xp coins stats.quizzesCompleted')
-    //   .sort({ level: -1, xp: -1 }).limit(10)
     const users = readDB('users');
 
     const leaderboard = users

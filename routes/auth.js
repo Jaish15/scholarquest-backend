@@ -8,28 +8,330 @@
 const express  = require('express');
 const bcrypt   = require('bcryptjs');
 const jwt      = require('jsonwebtoken');
+const crypto   = require('crypto');
+const { Resend } = require('resend');
 const { v4: uuidv4 } = require('uuid');
 const { readDB, writeDB } = require('../db');
 
+const passport = require('passport');
+const GoogleStrategy = require('passport-google-oauth20').Strategy;
+const GitHubStrategy = require('passport-github2').Strategy;
+
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'scholarquest_secret_change_in_prod';
+const getResend = () => new Resend(process.env.RESEND_API_KEY);
 
-// ── POST /api/auth/register ───────────────────────────────────
-// Body: { username, email, password }
-router.post('/register', async (req, res) => {
-  try {
-    const { username, email, password } = req.body;
+// ── Google OAuth Strategy Configuration ──────────────────────
+if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+  passport.use(
+    new GoogleStrategy(
+      {
+        clientID: process.env.GOOGLE_CLIENT_ID,
+        clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+        callbackURL: 'http://localhost:3000/api/auth/google/callback'
+      },
+      async (accessToken, refreshToken, profile, done) => {
+        try {
+          const email = (profile.emails && profile.emails[0] && profile.emails[0].value)
+            ? profile.emails[0].value.toLowerCase().trim()
+            : null;
 
-    // Validation
-    if (!username || !email || !password) {
-      return res.status(400).json({ error: 'username, email and password are required' });
+          if (!email) {
+            return done(new Error('No email found in Google profile'), null);
+          }
+
+          const users = readDB('users');
+          let user = users.find(u => u.email && u.email.toLowerCase() === email);
+
+          if (!user) {
+            const cleanName = profile.displayName || profile.name?.givenName || 'Google Scholar';
+            const baseUsername = email.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '') || 'scholar';
+            let uniqueUsername = baseUsername;
+            let counter = 1;
+            while (users.some(u => u.username && u.username.toLowerCase() === uniqueUsername.toLowerCase())) {
+              uniqueUsername = `${baseUsername}${counter++}`;
+            }
+
+            user = {
+              id: uuidv4(),
+              fullName: cleanName,
+              username: uniqueUsername,
+              email: email,
+              phone: '',
+              googleId: profile.id,
+              passwordHash: '',
+              createdAt: new Date().toISOString(),
+              level: 1,
+              xp: 0,
+              coins: 150,
+              loginStreak: 1,
+              loginDates: [new Date().toISOString().split('T')[0]],
+              quizStats: {
+                quizzesCompleted: 0,
+                missedByDomain: {}
+              },
+              hp: 100,
+              maxHp: 100,
+              avatar: { id: 'peasant' },
+              inventory: ['basic_book'],
+              equipped: { head: 'none', hand: 'none', pet: 'none' },
+              stats: {
+                quizzesCompleted: 0,
+                focusMinutes: 0,
+                lessonsCompleted: 0,
+                maxHabitStreak: 0
+              },
+              activeTheme: 'gold',
+              habits: [
+                { id: uuidv4(), name: 'Solve 1 DSA Problem', difficulty: 'medium', streak: 0, lastCompleted: '' },
+                { id: uuidv4(), name: 'Attend Lecture / Study 1 hour', difficulty: 'easy', streak: 0, lastCompleted: '' },
+                { id: uuidv4(), name: 'Write code in Python / JS', difficulty: 'hard', streak: 0, lastCompleted: '' }
+              ]
+            };
+
+            users.push(user);
+            writeDB('users', users);
+            console.log(`[Google OAuth] Created new account for ${email} (${uniqueUsername})`);
+          } else {
+            if (!user.googleId) {
+              user.googleId = profile.id;
+              writeDB('users', users);
+            }
+            console.log(`[Google OAuth] Logged into existing account for ${email}`);
+          }
+
+          return done(null, user);
+        } catch (err) {
+          console.error('[Google Strategy Exception]', err.message);
+          return done(err, null);
+        }
+      }
+    )
+  );
+}
+
+// ── GitHub OAuth Strategy Configuration ──────────────────────
+if (process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET) {
+  passport.use(
+    new GitHubStrategy(
+      {
+        clientID: process.env.GITHUB_CLIENT_ID,
+        clientSecret: process.env.GITHUB_CLIENT_SECRET,
+        callbackURL: 'http://localhost:3000/api/auth/github/callback',
+        scope: ['user:email']
+      },
+      async (accessToken, refreshToken, profile, done) => {
+        try {
+          let email = null;
+          if (profile.emails && profile.emails.length > 0) {
+            const primary = profile.emails.find(e => e.primary || e.verified) || profile.emails[0];
+            if (primary && primary.value) {
+              email = primary.value.toLowerCase().trim();
+            }
+          }
+          if (!email) {
+            email = `${profile.username || profile.id}@github.local`.toLowerCase();
+          }
+
+          const users = readDB('users');
+          let user = users.find(u =>
+            (u.email && u.email.toLowerCase() === email) ||
+            (u.githubId && u.githubId === profile.id)
+          );
+
+          if (!user) {
+            const cleanName = profile.displayName || profile.username || 'GitHub Scholar';
+            const baseUsername = (profile.username || email.split('@')[0]).replace(/[^a-zA-Z0-9_]/g, '') || 'scholar';
+            let uniqueUsername = baseUsername;
+            let counter = 1;
+            while (users.some(u => u.username && u.username.toLowerCase() === uniqueUsername.toLowerCase())) {
+              uniqueUsername = `${baseUsername}${counter++}`;
+            }
+
+            user = {
+              id: uuidv4(),
+              fullName: cleanName,
+              username: uniqueUsername,
+              email: email,
+              phone: '',
+              githubId: profile.id,
+              passwordHash: '',
+              createdAt: new Date().toISOString(),
+              level: 1,
+              xp: 0,
+              coins: 150,
+              loginStreak: 1,
+              loginDates: [new Date().toISOString().split('T')[0]],
+              quizStats: {
+                quizzesCompleted: 0,
+                missedByDomain: {}
+              },
+              hp: 100,
+              maxHp: 100,
+              avatar: { id: 'peasant' },
+              inventory: ['basic_book'],
+              equipped: { head: 'none', hand: 'none', pet: 'none' },
+              stats: {
+                quizzesCompleted: 0,
+                focusMinutes: 0,
+                lessonsCompleted: 0,
+                maxHabitStreak: 0
+              },
+              activeTheme: 'gold',
+              habits: [
+                { id: uuidv4(), name: 'Solve 1 DSA Problem', difficulty: 'medium', streak: 0, lastCompleted: '' },
+                { id: uuidv4(), name: 'Attend Lecture / Study 1 hour', difficulty: 'easy', streak: 0, lastCompleted: '' },
+                { id: uuidv4(), name: 'Write code in Python / JS', difficulty: 'hard', streak: 0, lastCompleted: '' }
+              ]
+            };
+
+            users.push(user);
+            writeDB('users', users);
+            console.log(`[GitHub OAuth] Created new account for ${email} (${uniqueUsername})`);
+          } else {
+            if (!user.githubId) {
+              user.githubId = profile.id;
+              writeDB('users', users);
+            }
+            console.log(`[GitHub OAuth] Logged into existing account for ${email}`);
+          }
+
+          return done(null, user);
+        } catch (err) {
+          console.error('[GitHub Strategy Exception]', err.message);
+          return done(err, null);
+        }
+      }
+    )
+  );
+}
+
+// Helper to resolve active frontend origin dynamically (supports state param, origin/referer headers, and defaults to http://localhost:8086)
+const getFrontendOrigin = (req) => {
+  if (req && req.query && req.query.state) {
+    try {
+      const decoded = decodeURIComponent(req.query.state);
+      if (decoded && decoded.startsWith('http://')) return decoded;
+    } catch (e) {}
+  }
+  if (req && req.headers) {
+    if (req.headers.origin && /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(req.headers.origin)) {
+      return req.headers.origin;
+    }
+    if (req.headers.referer) {
+      try {
+        const u = new URL(req.headers.referer);
+        if (/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(u.origin)) return u.origin;
+      } catch (e) {}
+    }
+  }
+  const envUrl = process.env.FRONTEND_URL;
+  if (envUrl && envUrl !== 'http://localhost:5500') {
+    return envUrl;
+  }
+  return 'http://localhost:8086';
+};
+
+// ── GET /api/auth/google ──────────────────────────────────────
+router.get('/google', (req, res, next) => {
+  if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
+    return res.status(500).json({ error: 'Google OAuth environment variables not set on backend server.' });
+  }
+  const clientOrigin = getFrontendOrigin(req);
+  passport.authenticate('google', {
+    session: false,
+    scope: ['profile', 'email'],
+    state: encodeURIComponent(clientOrigin)
+  })(req, res, next);
+});
+
+// ── GET /api/auth/google/callback ─────────────────────────────
+router.get('/google/callback', (req, res, next) => {
+  const frontendUrl = getFrontendOrigin(req);
+
+  passport.authenticate('google', { session: false }, (err, user, info) => {
+    if (err || !user) {
+      console.error('[Google OAuth Failed]', err ? err.message : info);
+      return res.redirect(`${frontendUrl}?error=google_auth_failed#login`);
     }
 
-    // TODO (MongoDB): User.findOne({ email })
+    const token = jwt.sign({ id: user.id, username: user.username }, JWT_SECRET, { expiresIn: '7d' });
+    return res.redirect(`${frontendUrl}?token=${token}&sso=google#dashboard`);
+  })(req, res, next);
+});
+
+// ── GET /api/auth/github ──────────────────────────────────────
+router.get('/github', (req, res, next) => {
+  if (!process.env.GITHUB_CLIENT_ID || !process.env.GITHUB_CLIENT_SECRET) {
+    return res.status(500).json({ error: 'GitHub OAuth environment variables not set on backend server.' });
+  }
+  const clientOrigin = getFrontendOrigin(req);
+  passport.authenticate('github', {
+    session: false,
+    scope: ['user:email'],
+    state: encodeURIComponent(clientOrigin)
+  })(req, res, next);
+});
+
+// ── GET /api/auth/github/callback ─────────────────────────────
+router.get('/github/callback', (req, res, next) => {
+  const frontendUrl = getFrontendOrigin(req);
+
+  passport.authenticate('github', { session: false }, (err, user, info) => {
+    if (err || !user) {
+      console.error('[GitHub OAuth Failed]', err ? err.message : info);
+      return res.redirect(`${frontendUrl}?error=github_auth_failed#login`);
+    }
+
+    const token = jwt.sign({ id: user.id, username: user.username }, JWT_SECRET, { expiresIn: '7d' });
+    return res.redirect(`${frontendUrl}?token=${token}&sso=github#dashboard`);
+  })(req, res, next);
+});
+
+// ── POST /api/auth/register ───────────────────────────────────
+// Body: { fullName, email, phone, username, password }
+router.post('/register', async (req, res) => {
+  try {
+    const { fullName, email, phone, username, password } = req.body;
+    const cleanUsername = (username || '').trim();
+    const cleanEmail = (email || '').trim().toLowerCase();
+    const cleanName = (fullName || cleanUsername || 'Scholar').trim();
+    const cleanPhone = (phone || '').trim();
+
+    // Validation
+    if (!cleanName) {
+      return res.status(400).json({ error: 'Full name is required.' });
+    }
+
+    if (!cleanEmail) {
+      return res.status(400).json({ error: 'Email address is required.' });
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(cleanEmail)) {
+      return res.status(400).json({ error: 'Please enter a valid email address.' });
+    }
+
+    if (!cleanUsername || cleanUsername.length < 3) {
+      return res.status(400).json({ error: 'Username must be at least 3 characters long.' });
+    }
+
+    if (!password || password.length < 8) {
+      return res.status(400).json({ error: 'Password must be at least 8 characters long.' });
+    }
+
     const users = readDB('users');
-    const existing = users.find(u => u.email === email || u.username === username);
-    if (existing) {
-      return res.status(409).json({ error: 'User already exists with that email or username' });
+    
+    // Check Email Uniqueness
+    const emailExists = users.some(u => u.email && u.email.toLowerCase() === cleanEmail);
+    if (emailExists) {
+      return res.status(409).json({ error: 'An account with this email address already exists.' });
+    }
+
+    // Check Username Uniqueness
+    const usernameExists = users.some(u => u.username && u.username.toLowerCase() === cleanUsername.toLowerCase());
+    if (usernameExists) {
+      return res.status(409).json({ error: 'Username is already taken. Please choose another.' });
     }
 
     // Hash password
@@ -38,14 +340,22 @@ router.post('/register', async (req, res) => {
     // Create user with default ScholarQuest state
     const newUser = {
       id: uuidv4(),
-      username,
-      email,
+      fullName: cleanName,
+      username: cleanUsername,
+      email: cleanEmail,
+      phone: cleanPhone,
       passwordHash,
       createdAt: new Date().toISOString(),
       // ── ScholarQuest game state ──
       level: 1,
       xp: 0,
       coins: 150,
+      loginStreak: 0,
+      loginDates: [],
+      quizStats: {
+        quizzesCompleted: 0,
+        missedByDomain: {}
+      },
       hp: 100,
       maxHp: 100,
       avatar: { id: 'peasant' },
@@ -65,12 +375,11 @@ router.post('/register', async (req, res) => {
       ]
     };
 
-    // TODO (MongoDB): await new User(newUser).save()
     users.push(newUser);
     writeDB('users', users);
 
     // Return token (exclude passwordHash)
-    const token = jwt.sign({ id: newUser.id, username }, JWT_SECRET, { expiresIn: '7d' });
+    const token = jwt.sign({ id: newUser.id, username: newUser.username }, JWT_SECRET, { expiresIn: '7d' });
     const { passwordHash: _, ...safeUser } = newUser;
 
     res.status(201).json({
@@ -127,82 +436,175 @@ router.post('/login', async (req, res) => {
 
 // ── POST /api/auth/forgot-password ───────────────────────────
 // Body: { email }
-router.post('/forgot-password', (req, res) => {
+router.post('/forgot-password', async (req, res) => {
   try {
     const { email } = req.body;
-    if (!email) {
-      return res.status(400).json({ error: 'Email is required' });
+    const cleanEmail = (email || '').trim().toLowerCase();
+
+    // Generic success response to avoid disclosing email registration status
+    const genericResponse = {
+      message: 'If that email is registered, a reset link has been sent.'
+    };
+
+    if (!cleanEmail) {
+      return res.status(400).json({ error: 'Email address is required' });
     }
 
     const users = readDB('users');
-    const userIndex = users.findIndex(u => u.email.toLowerCase() === email.toLowerCase());
+    const user = users.find(u => u.email && u.email.toLowerCase() === cleanEmail);
 
-    if (userIndex === -1) {
-      return res.status(404).json({ error: 'No scholar account found with this email' });
+    if (!user) {
+      return res.json(genericResponse);
     }
 
-    // Generate a 6-digit recovery code & expiry (15 mins)
-    const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
-    const resetExpires = Date.now() + 15 * 60 * 1000;
+    // Generate secure random token
+    const token = crypto.randomBytes(32).toString('hex');
+    const expiresAt = Date.now() + 15 * 60 * 1000; // 15 minutes
 
-    users[userIndex].resetCode = resetCode;
-    users[userIndex].resetExpires = resetExpires;
-
-    writeDB('users', users);
-
-    res.json({
-      message: '⚔️ Recovery code dispatched!',
-      resetCode, // Returned for instant demo testing
-      expiresIn: '15 minutes'
+    const resetTokens = readDB('password_reset_tokens') || [];
+    resetTokens.push({
+      id: uuidv4(),
+      userId: user.id,
+      token,
+      expiresAt,
+      used: false,
+      createdAt: new Date().toISOString()
     });
+    writeDB('password_reset_tokens', resetTokens);
+
+    // Construct reset link URL dynamically
+    const origin = getFrontendOrigin(req);
+    const resetUrl = `${origin}?token=${token}#reset-password`;
+
+    // ScholarQuest Dark/Gold Branded HTML Email Template
+    const htmlTemplate = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <style>
+          body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #0d0b08; color: #f5e8d7; margin: 0; padding: 24px; }
+          .card { max-width: 540px; margin: 0 auto; background: #16120c; border: 1px solid rgba(245, 158, 11, 0.4); border-radius: 18px; padding: 36px 28px; box-shadow: 0 12px 36px rgba(0,0,0,0.8); }
+          .header { text-align: center; border-bottom: 1px solid rgba(245, 158, 11, 0.2); padding-bottom: 20px; margin-bottom: 24px; }
+          .title { font-size: 26px; font-weight: 800; color: #f59e0b; margin: 0; letter-spacing: 0.04em; }
+          .subtitle { font-size: 11px; color: rgba(245,232,215,0.5); text-transform: uppercase; letter-spacing: 0.1em; margin-top: 4px; }
+          .greeting { font-size: 16px; font-weight: 700; color: #f5e8d7; margin-bottom: 16px; }
+          .text { font-size: 14px; color: rgba(245,232,215,0.8); line-height: 1.6; margin-bottom: 24px; }
+          .btn-wrapper { text-align: center; margin: 32px 0; }
+          .reset-btn { background: linear-gradient(90deg, #f59e0b, #d97706); color: #0f0b06 !important; font-weight: 800; font-size: 15px; padding: 14px 34px; border-radius: 12px; text-decoration: none; display: inline-block; box-shadow: 0 4px 16px rgba(245,158,11,0.4); }
+          .expiry-box { font-size: 12px; color: #ef4444; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); padding: 12px 16px; border-radius: 10px; text-align: center; margin-top: 24px; font-weight: 600; }
+          .fallback-link { font-size: 11px; color: #f59e0b; word-break: break-all; text-align: center; margin-top: 20px; line-height: 1.5; }
+          .footer { font-size: 11px; color: rgba(245,232,215,0.4); text-align: center; border-top: 1px solid rgba(245,158,11,0.15); padding-top: 20px; margin-top: 32px; }
+        </style>
+      </head>
+      <body>
+        <div class="card">
+          <div class="header">
+            <div class="title">⚔️ ScholarQuest</div>
+            <div class="subtitle">Password Reset Request</div>
+          </div>
+          
+          <div class="greeting">Greetings, ${user.fullName || user.username || 'Scholar'}!</div>
+          
+          <div class="text">
+            A password reset request was initiated for your ScholarQuest account. Click the button below to reset your password and recover your account:
+          </div>
+          
+          <div class="btn-wrapper">
+            <a href="${resetUrl}" target="_blank" class="reset-btn">Reset Your Password 🔑</a>
+          </div>
+          
+          <div class="fallback-link">
+            If the button doesn't work, copy and paste this URL into your browser:<br>
+            <a href="${resetUrl}" style="color: #f59e0b;">${resetUrl}</a>
+          </div>
+          
+          <div class="expiry-box">
+            ⏳ Note: This password reset link expires in <strong>15 minutes</strong>.
+          </div>
+          
+          <div class="footer">
+            If you did not request this password reset, please ignore this email.<br>
+            © ScholarQuest Gamified Platform
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    try {
+      const resend = getResend();
+      await resend.emails.send({
+        from: 'ScholarQuest <onboarding@resend.dev>',
+        to: user.email,
+        subject: '⚔️ Reset Your ScholarQuest Password',
+        html: htmlTemplate
+      });
+      console.log(`[Resend Email] Password reset email sent to user.`);
+    } catch (emailErr) {
+      console.error('[Resend Email Exception]', emailErr.message);
+    }
+
+    return res.json(genericResponse);
+
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('[Forgot Password Error]', err.message);
+    res.status(500).json({ error: 'Failed to process forgot password request.' });
   }
 });
 
 // ── POST /api/auth/reset-password ────────────────────────────
-// Body: { email, resetCode, newPassword }
+// Body: { token, newPassword }
 router.post('/reset-password', async (req, res) => {
   try {
-    const { email, resetCode, newPassword } = req.body;
-    if (!email || !resetCode || !newPassword) {
-      return res.status(400).json({ error: 'Email, reset code, and new password are required' });
+    const { token, newPassword } = req.body;
+
+    if (!token || !newPassword) {
+      return res.status(400).json({ error: 'Reset token and new password are required.' });
     }
 
-    if (newPassword.length < 4) {
-      return res.status(400).json({ error: 'Password must be at least 4 characters' });
+    if (newPassword.length < 8) {
+      return res.status(400).json({ error: 'Password must be at least 8 characters long.' });
+    }
+
+    const resetTokens = readDB('password_reset_tokens') || [];
+    const tokenRecord = resetTokens.find(t => t.token === token);
+
+    if (!tokenRecord) {
+      return res.status(400).json({ error: 'Invalid or expired password reset link.' });
+    }
+
+    if (tokenRecord.used) {
+      return res.status(400).json({ error: 'This password reset link has already been used.' });
+    }
+
+    if (Date.now() > tokenRecord.expiresAt) {
+      return res.status(400).json({ error: 'This password reset link has expired. Please request a new link.' });
     }
 
     const users = readDB('users');
-    const userIndex = users.findIndex(u => u.email.toLowerCase() === email.toLowerCase());
+    const userIndex = users.findIndex(u => u.id === tokenRecord.userId);
 
     if (userIndex === -1) {
-      return res.status(404).json({ error: 'Account not found' });
+      return res.status(400).json({ error: 'Account not found.' });
     }
 
-    const user = users[userIndex];
-
-    if (!user.resetCode || user.resetCode !== resetCode.trim()) {
-      return res.status(400).json({ error: 'Invalid recovery code' });
-    }
-
-    if (Date.now() > user.resetExpires) {
-      return res.status(400).json({ error: 'Recovery code has expired. Request a new one.' });
-    }
-
-    // Update password
+    // Hash new password
     const newHash = await bcrypt.hash(newPassword, 10);
     users[userIndex].passwordHash = newHash;
-    delete users[userIndex].resetCode;
-    delete users[userIndex].resetExpires;
-
     writeDB('users', users);
 
-    res.json({
-      message: '🔑 Password reset successfully! You can now log in.'
+    // Mark token as used
+    tokenRecord.used = true;
+    writeDB('password_reset_tokens', resetTokens);
+
+    return res.json({
+      message: '🎉 Password has been reset successfully! You can now log in with your new password.'
     });
+
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('[Reset Password Error]', err.message);
+    res.status(500).json({ error: 'Failed to reset password.' });
   }
 });
 
