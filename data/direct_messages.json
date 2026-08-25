@@ -332,5 +332,75 @@
     "attachment": null,
     "timestamp": "2026-08-23T14:50:20.930Z",
     "read": false
+  },
+  {
+    "id": "e9cffa25-7d95-426f-bf10-397387311695",
+    "senderId": "a83bc89a-3c9d-4323-8387-cd17b7310f06",
+    "recipientId": "a9ead7c8-4803-40e6-a4dd-271de6b63c22",
+    "text": "Hi",
+    "attachment": null,
+    "timestamp": "2026-08-25T03:26:25.090Z",
+    "read": true
+  },
+  {
+    "id": "79ff6a1a-b2d5-4689-b767-7bea2bcd0458",
+    "senderId": "a9ead7c8-4803-40e6-a4dd-271de6b63c22",
+    "recipientId": "a83bc89a-3c9d-4323-8387-cd17b7310f06",
+    "text": "",
+    "attachment": {
+      "url": "/uploads/dm/Paysanne_The_witcher-1787628395982-921473018.jpeg",
+      "originalName": "Paysanne The witcher.jpeg",
+      "fileName": "Paysanne_The_witcher-1787628395982-921473018.jpeg",
+      "fileType": "image",
+      "mimeType": "image/jpeg",
+      "fileSize": 136023
+    },
+    "timestamp": "2026-08-25T03:26:35.988Z",
+    "read": true
+  },
+  {
+    "id": "b1f788db-9f5f-4aac-bc6c-df15e67029fe",
+    "senderId": "a83bc89a-3c9d-4323-8387-cd17b7310f06",
+    "recipientId": "a9ead7c8-4803-40e6-a4dd-271de6b63c22",
+    "text": "⚔️ ScholarQuest Challenge Share!\nCheck out this challenge in CodeScroll: [Python - Beginner] 1. Square Number Calculator\n👉 Open Quest: http://localhost:5500/?view=codescroll&domain=Python&difficulty=Beginner&challengeIndex=0",
+    "attachment": null,
+    "timestamp": "2026-08-25T03:40:26.435Z",
+    "read": true
+  },
+  {
+    "id": "2a1fcaec-106f-4aa7-a95b-bb96f83121a7",
+    "senderId": "a9ead7c8-4803-40e6-a4dd-271de6b63c22",
+    "recipientId": "a83bc89a-3c9d-4323-8387-cd17b7310f06",
+    "text": "[CHALLENGE_SHARE]{\"type\":\"challenge_share\",\"domain\":\"Python\",\"difficulty\":\"Beginner\",\"title\":\"1. Square Number Calculator\",\"xp\":30,\"coins\":10,\"url\":\"http://localhost:5500/?view=codescroll&domain=Python&difficulty=Beginner&challengeIndex=0\"}",
+    "attachment": null,
+    "timestamp": "2026-08-25T03:45:54.548Z",
+    "read": true
+  },
+  {
+    "id": "77734208-d5cf-4f2c-87c6-9d597a467859",
+    "senderId": "a83bc89a-3c9d-4323-8387-cd17b7310f06",
+    "recipientId": "a9ead7c8-4803-40e6-a4dd-271de6b63c22",
+    "text": "[CHALLENGE_SHARE]{\"type\":\"challenge_share\",\"domain\":\"Python\",\"difficulty\":\"Beginner\",\"title\":\"5. Max of Two Numbers\",\"xp\":30,\"coins\":10,\"url\":\"http://localhost:5500/?view=codescroll&domain=Python&difficulty=Beginner&challengeIndex=4\"}",
+    "attachment": null,
+    "timestamp": "2026-08-25T03:47:04.613Z",
+    "read": true
+  },
+  {
+    "id": "4536a9cb-38f3-4677-ba0a-012d154546d2",
+    "senderId": "a9ead7c8-4803-40e6-a4dd-271de6b63c22",
+    "recipientId": "a83bc89a-3c9d-4323-8387-cd17b7310f06",
+    "text": "[CHALLENGE_SHARE]{\"type\":\"challenge_share\",\"domain\":\"Python\",\"difficulty\":\"Beginner\",\"title\":\"5. Max of Two Numbers\",\"xp\":30,\"coins\":10,\"url\":\"http://localhost:5500/?view=codescroll&domain=Python&difficulty=Beginner&challengeIndex=4\"}",
+    "attachment": null,
+    "timestamp": "2026-08-25T03:48:25.446Z",
+    "read": true
+  },
+  {
+    "id": "e20e6173-67b1-4fea-9ccd-3dd99b505004",
+    "senderId": "a83bc89a-3c9d-4323-8387-cd17b7310f06",
+    "recipientId": "a9ead7c8-4803-40e6-a4dd-271de6b63c22",
+    "text": "[CHALLENGE_SHARE]{\"type\":\"challenge_share\",\"domain\":\"Python\",\"difficulty\":\"Beginner\",\"title\":\"1. Square Number Calculator\",\"xp\":30,\"coins\":10,\"url\":\"http://localhost:5500/?view=codescroll&domain=Python&difficulty=Beginner&challengeIndex=0\"}",
+    "attachment": null,
+    "timestamp": "2026-08-25T05:39:19.398Z",
+    "read": true
   }
 ]

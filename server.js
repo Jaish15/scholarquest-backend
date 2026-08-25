@@ -9,6 +9,7 @@ const http     = require('http');
 const { Server } = require('socket.io');
 const cors     = require('cors');
 const path     = require('path');
+const { readDB, writeDB } = require('./db');
 
 // ── Route Imports ─────────────────────────────────────────────
 const authRoutes        = require('./routes/auth');

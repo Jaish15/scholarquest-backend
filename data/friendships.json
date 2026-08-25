@@ -78,5 +78,13 @@
     "status": "accepted",
     "createdAt": "2026-08-19T07:06:43.725Z",
     "updatedAt": "2026-08-19T07:07:07.477Z"
+  },
+  {
+    "id": "9adc5f4e-c5e6-4764-bacf-c7f73b527db7",
+    "requesterId": "a83bc89a-3c9d-4323-8387-cd17b7310f06",
+    "recipientId": "a9ead7c8-4803-40e6-a4dd-271de6b63c22",
+    "status": "accepted",
+    "createdAt": "2026-08-25T03:26:10.161Z",
+    "updatedAt": "2026-08-25T03:26:16.342Z"
   }
 ]
