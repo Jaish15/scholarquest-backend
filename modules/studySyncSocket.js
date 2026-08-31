@@ -90,8 +90,9 @@ function setupStudySyncSocket(io) {
         if (callback) callback(responsePayload);
         socket.emit('dm:sent', responsePayload);
 
-        // Real-time delivery to recipient socket(s)
+        // Real-time delivery to recipient socket(s) and sender sockets
         io.to(`user:${recipientId}`).emit('dm:receive', savedMessage);
+        io.to(`user:${senderId}`).emit('dm:receive', savedMessage);
 
       } catch (err) {
         console.error('[Socket Error] dm:send failed:', err.message);
@@ -101,7 +102,20 @@ function setupStudySyncSocket(io) {
       }
     });
 
-    // ── 3. TYPING INDICATOR ──────────────────────────────────────────────
+    // ── 3. REQUEST FRIENDS STATUS ────────────────────────────────────────
+    socket.on('user:checkFriendsStatus', async (data) => {
+      try {
+        const userInfo = socketUsers.get(socket.id);
+        const userId = (data && data.userId) || (userInfo && userInfo.userId);
+        if (!userId) return;
+        const friends = await store.getFriendsList(userId, getOnlineUsersSet());
+        socket.emit('friends:list', { friends });
+      } catch (err) {
+        console.error('[Socket Error] user:checkFriendsStatus:', err.message);
+      }
+    });
+
+    // ── 4. TYPING INDICATOR ──────────────────────────────────────────────
     socket.on('dm:typing', (data) => {
       const senderInfo = socketUsers.get(socket.id);
       const senderId = (senderInfo && senderInfo.userId) || (data && data.senderId);

@@ -22,6 +22,10 @@ const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'scholarquest_secret_change_in_prod';
 const getResend = () => new Resend(process.env.RESEND_API_KEY);
 
+const BACKEND_URL = (process.env.BACKEND_URL || (process.env.NODE_ENV === 'production' || process.env.RENDER ? 'https://scholarquest-backend.onrender.com' : 'http://localhost:3000')).replace(/\/+$/, '');
+const GOOGLE_CALLBACK = process.env.GOOGLE_CALLBACK_URL || `${BACKEND_URL}/api/auth/google/callback`;
+const GITHUB_CALLBACK = process.env.GITHUB_CALLBACK_URL || `${BACKEND_URL}/api/auth/github/callback`;
+
 // ── Google OAuth Strategy Configuration ──────────────────────
 if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
   passport.use(
@@ -29,7 +33,8 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
       {
         clientID: process.env.GOOGLE_CLIENT_ID,
         clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-        callbackURL: 'http://localhost:3000/api/auth/google/callback'
+        callbackURL: GOOGLE_CALLBACK,
+        proxy: true
       },
       async (accessToken, refreshToken, profile, done) => {
         try {
@@ -90,7 +95,8 @@ if (process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET) {
       {
         clientID: process.env.GITHUB_CLIENT_ID,
         clientSecret: process.env.GITHUB_CLIENT_SECRET,
-        callbackURL: 'http://localhost:3000/api/auth/github/callback',
+        callbackURL: GITHUB_CALLBACK,
+        proxy: true,
         scope: ['user:email']
       },
       async (accessToken, refreshToken, profile, done) => {

@@ -136,10 +136,11 @@ router.post('/send', verifyToken, async (req, res) => {
 
     const savedMsg = await store.saveDirectMessage(senderId, recipientId, text, attachment);
 
-    // Broadcast via socket
+    // Broadcast via socket to both recipient and sender
     const socketModule = require('../modules/studySyncSocket');
     if (socketModule && socketModule.sendDirectMessageEvent) {
       socketModule.sendDirectMessageEvent(recipientId, savedMsg);
+      socketModule.sendDirectMessageEvent(senderId, savedMsg);
     }
 
     res.status(201).json({
