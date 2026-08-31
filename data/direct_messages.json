@@ -402,5 +402,23 @@
     "attachment": null,
     "timestamp": "2026-08-25T05:39:19.398Z",
     "read": true
+  },
+  {
+    "id": "03df77ac-92c4-4fa3-9ff7-1304ca1c5c8b",
+    "senderId": "a83bc89a-3c9d-4323-8387-cd17b7310f06",
+    "recipientId": "a9ead7c8-4803-40e6-a4dd-271de6b63c22",
+    "text": "hi",
+    "attachment": null,
+    "timestamp": "2026-08-28T06:33:48.882Z",
+    "read": true
+  },
+  {
+    "id": "d70c6d24-8b30-4c60-ad02-5e21f46a80c1",
+    "senderId": "f2704207-80bd-4adc-85fa-038455512b9a",
+    "recipientId": "29227c87-f639-47b1-a831-9ddaa59ebd23",
+    "text": "Greetings fellow scholar! Ready for a study session?",
+    "attachment": null,
+    "timestamp": "2026-08-30T17:21:28.743Z",
+    "read": false
   }
 ]

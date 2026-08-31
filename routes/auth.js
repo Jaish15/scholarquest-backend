@@ -12,6 +12,7 @@ const crypto   = require('crypto');
 const { Resend } = require('resend');
 const { v4: uuidv4 } = require('uuid');
 const { readDB, writeDB } = require('../db');
+const { verifyToken } = require('../middleware/auth');
 
 const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
@@ -41,7 +42,10 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
           }
 
           const users = readDB('users');
-          let user = users.find(u => u.email && u.email.toLowerCase() === email);
+          let user = users.find(u =>
+            (u.email && u.email.toLowerCase() === email) ||
+            (u.googleId && u.googleId === profile.id)
+          );
 
           if (!user) {
             const cleanName = profile.displayName || profile.name?.givenName || 'Google Scholar';
@@ -52,55 +56,24 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
               uniqueUsername = `${baseUsername}${counter++}`;
             }
 
-            user = {
-              id: uuidv4(),
-              fullName: cleanName,
-              username: uniqueUsername,
+            // Return pending user payload — DO NOT create user record in DB yet
+            const pendingUser = {
+              isNew: true,
+              provider: 'google',
+              providerId: profile.id,
               email: email,
-              phone: '',
-              googleId: profile.id,
-              passwordHash: '',
-              createdAt: new Date().toISOString(),
-              level: 1,
-              xp: 0,
-              coins: 150,
-              loginStreak: 1,
-              loginDates: [new Date().toISOString().split('T')[0]],
-              quizStats: {
-                quizzesCompleted: 0,
-                missedByDomain: {}
-              },
-              hp: 100,
-              maxHp: 100,
-              avatar: { id: 'peasant' },
-              inventory: ['basic_book'],
-              equipped: { head: 'none', hand: 'none', pet: 'none' },
-              stats: {
-                quizzesCompleted: 0,
-                focusMinutes: 0,
-                lessonsCompleted: 0,
-                maxHabitStreak: 0
-              },
-              activeTheme: 'gold',
-              habits: [
-                { id: uuidv4(), name: 'Solve 1 DSA Problem', difficulty: 'medium', streak: 0, lastCompleted: '' },
-                { id: uuidv4(), name: 'Attend Lecture / Study 1 hour', difficulty: 'easy', streak: 0, lastCompleted: '' },
-                { id: uuidv4(), name: 'Write code in Python / JS', difficulty: 'hard', streak: 0, lastCompleted: '' }
-              ]
+              fullName: cleanName,
+              suggestedUsername: uniqueUsername
             };
-
-            users.push(user);
-            writeDB('users', users);
-            console.log(`[Google OAuth] Created new account for ${email} (${uniqueUsername})`);
+            return done(null, pendingUser);
           } else {
             if (!user.googleId) {
               user.googleId = profile.id;
               writeDB('users', users);
             }
             console.log(`[Google OAuth] Logged into existing account for ${email}`);
+            return done(null, user);
           }
-
-          return done(null, user);
         } catch (err) {
           console.error('[Google Strategy Exception]', err.message);
           return done(err, null);
@@ -148,55 +121,24 @@ if (process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET) {
               uniqueUsername = `${baseUsername}${counter++}`;
             }
 
-            user = {
-              id: uuidv4(),
-              fullName: cleanName,
-              username: uniqueUsername,
+            // Return pending user payload — DO NOT create user record in DB yet
+            const pendingUser = {
+              isNew: true,
+              provider: 'github',
+              providerId: profile.id,
               email: email,
-              phone: '',
-              githubId: profile.id,
-              passwordHash: '',
-              createdAt: new Date().toISOString(),
-              level: 1,
-              xp: 0,
-              coins: 150,
-              loginStreak: 1,
-              loginDates: [new Date().toISOString().split('T')[0]],
-              quizStats: {
-                quizzesCompleted: 0,
-                missedByDomain: {}
-              },
-              hp: 100,
-              maxHp: 100,
-              avatar: { id: 'peasant' },
-              inventory: ['basic_book'],
-              equipped: { head: 'none', hand: 'none', pet: 'none' },
-              stats: {
-                quizzesCompleted: 0,
-                focusMinutes: 0,
-                lessonsCompleted: 0,
-                maxHabitStreak: 0
-              },
-              activeTheme: 'gold',
-              habits: [
-                { id: uuidv4(), name: 'Solve 1 DSA Problem', difficulty: 'medium', streak: 0, lastCompleted: '' },
-                { id: uuidv4(), name: 'Attend Lecture / Study 1 hour', difficulty: 'easy', streak: 0, lastCompleted: '' },
-                { id: uuidv4(), name: 'Write code in Python / JS', difficulty: 'hard', streak: 0, lastCompleted: '' }
-              ]
+              fullName: cleanName,
+              suggestedUsername: uniqueUsername
             };
-
-            users.push(user);
-            writeDB('users', users);
-            console.log(`[GitHub OAuth] Created new account for ${email} (${uniqueUsername})`);
+            return done(null, pendingUser);
           } else {
             if (!user.githubId) {
               user.githubId = profile.id;
               writeDB('users', users);
             }
             console.log(`[GitHub OAuth] Logged into existing account for ${email}`);
+            return done(null, user);
           }
-
-          return done(null, user);
         } catch (err) {
           console.error('[GitHub Strategy Exception]', err.message);
           return done(err, null);
@@ -206,31 +148,37 @@ if (process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET) {
   );
 }
 
-// Helper to resolve active frontend origin dynamically (supports state param, origin/referer headers, and defaults to http://localhost:8086)
+// Helper to resolve active frontend origin dynamically (supports state param, origin/referer headers, process.env.FRONTEND_URL, and defaults to http://localhost:5500)
 const getFrontendOrigin = (req) => {
   if (req && req.query && req.query.state) {
     try {
       const decoded = decodeURIComponent(req.query.state);
-      if (decoded && decoded.startsWith('http://')) return decoded;
+      if (decoded && (decoded.startsWith('http://') || decoded.startsWith('https://'))) return decoded;
     } catch (e) {}
   }
   if (req && req.headers) {
-    if (req.headers.origin && /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(req.headers.origin)) {
+    if (req.headers.origin && /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(req.headers.origin)) {
       return req.headers.origin;
     }
     if (req.headers.referer) {
       try {
         const u = new URL(req.headers.referer);
-        if (/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(u.origin)) return u.origin;
+        if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(u.origin)) return u.origin;
       } catch (e) {}
     }
   }
-  const envUrl = process.env.FRONTEND_URL;
-  if (envUrl && envUrl !== 'http://localhost:5500') {
-    return envUrl;
-  }
-  return 'http://localhost:8086';
+  return process.env.FRONTEND_URL || 'http://localhost:5500';
 };
+
+// ── GET /api/auth/me ───────────────────────────────────────────
+// Returns authenticated user details for current session token
+router.get('/me', verifyToken, (req, res) => {
+  const users = readDB('users');
+  const user = users.find(u => u.id === req.user.id);
+  if (!user) return res.status(404).json({ error: 'User not found' });
+  const { passwordHash: _, ...safeUser } = user;
+  res.json({ user: safeUser });
+});
 
 // ── GET /api/auth/google ──────────────────────────────────────
 router.get('/google', (req, res, next) => {
@@ -253,6 +201,19 @@ router.get('/google/callback', (req, res, next) => {
     if (err || !user) {
       console.error('[Google OAuth Failed]', err ? err.message : info);
       return res.redirect(`${frontendUrl}?error=google_auth_failed#login`);
+    }
+
+    if (user.isNew) {
+      const pendingToken = jwt.sign({
+        pendingOauth: true,
+        provider: user.provider,
+        providerId: user.providerId,
+        email: user.email,
+        fullName: user.fullName,
+        suggestedUsername: user.suggestedUsername
+      }, JWT_SECRET, { expiresIn: '15m' });
+
+      return res.redirect(`${frontendUrl}?pending_oauth=${encodeURIComponent(pendingToken)}&sso=google#complete-registration`);
     }
 
     const token = jwt.sign({ id: user.id, username: user.username }, JWT_SECRET, { expiresIn: '7d' });
@@ -281,6 +242,19 @@ router.get('/github/callback', (req, res, next) => {
     if (err || !user) {
       console.error('[GitHub OAuth Failed]', err ? err.message : info);
       return res.redirect(`${frontendUrl}?error=github_auth_failed#login`);
+    }
+
+    if (user.isNew) {
+      const pendingToken = jwt.sign({
+        pendingOauth: true,
+        provider: user.provider,
+        providerId: user.providerId,
+        email: user.email,
+        fullName: user.fullName,
+        suggestedUsername: user.suggestedUsername
+      }, JWT_SECRET, { expiresIn: '15m' });
+
+      return res.redirect(`${frontendUrl}?pending_oauth=${encodeURIComponent(pendingToken)}&sso=github#complete-registration`);
     }
 
     const token = jwt.sign({ id: user.id, username: user.username }, JWT_SECRET, { expiresIn: '7d' });
@@ -534,12 +508,16 @@ router.post('/forgot-password', async (req, res) => {
 
     try {
       const resend = getResend();
-      await resend.emails.send({
+      const sendPromise = resend.emails.send({
         from: 'ScholarQuest <onboarding@resend.dev>',
         to: user.email,
         subject: '⚔️ Reset Your ScholarQuest Password',
         html: htmlTemplate
       });
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Resend email dispatch timed out')), 3000)
+      );
+      await Promise.race([sendPromise, timeoutPromise]);
       console.log(`[Resend Email] Password reset email sent to user.`);
     } catch (emailErr) {
       console.error('[Resend Email Exception]', emailErr.message);
@@ -605,6 +583,169 @@ router.post('/reset-password', async (req, res) => {
   } catch (err) {
     console.error('[Reset Password Error]', err.message);
     res.status(500).json({ error: 'Failed to reset password.' });
+  }
+});
+
+// ── DELETE /api/auth/account ──────────────────────────────────
+// Authenticated Hard Delete Endpoint: Wipes current user and all associated data
+router.delete('/account', verifyToken, (req, res) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    // 1. Delete user record from users.json
+    let users = readDB('users') || [];
+    const initialUserCount = users.length;
+    users = users.filter(u => u.id !== userId);
+    if (users.length === initialUserCount) {
+      return res.status(404).json({ error: 'User account not found' });
+    }
+    writeDB('users', users);
+
+    // 2. Delete friend connections involving userId from friendships.json
+    let friendships = readDB('friendships') || [];
+    friendships = friendships.filter(f => f.requesterId !== userId && f.receiverId !== userId);
+    writeDB('friendships', friendships);
+
+    // 3. Delete direct messages involving userId from direct_messages.json
+    let directMessages = readDB('direct_messages') || [];
+    directMessages = directMessages.filter(m => m.senderId !== userId && m.receiverId !== userId);
+    writeDB('direct_messages', directMessages);
+
+    // 4. Delete password reset tokens for userId from password_reset_tokens.json
+    let resetTokens = readDB('password_reset_tokens') || [];
+    resetTokens = resetTokens.filter(t => t.userId !== userId);
+    writeDB('password_reset_tokens', resetTokens);
+
+    // 5. Delete room members for userId from room_members.json
+    let roomMembers = readDB('room_members') || [];
+    roomMembers = roomMembers.filter(rm => rm.userId !== userId);
+    writeDB('room_members', roomMembers);
+
+    console.log(`[Account Deleted] User ID ${userId} hard-deleted completely across all collections.`);
+    res.json({ message: '⚔️ Account and all associated data permanently deleted.' });
+  } catch (err) {
+    console.error('[Delete Account Error]', err.message);
+    res.status(500).json({ error: 'Failed to delete account' });
+  }
+});
+
+// ── POST /api/auth/check-username ───────────────────────────
+router.post('/check-username', (req, res) => {
+  const { username } = req.body;
+  const clean = (username || '').trim();
+  if (!clean || clean.length < 3) {
+    return res.json({ available: false, error: 'Username must be at least 3 characters long.' });
+  }
+  const users = readDB('users') || [];
+  const taken = users.some(u => u.username && u.username.toLowerCase() === clean.toLowerCase());
+  return res.json({ available: !taken });
+});
+
+// ── POST /api/auth/oauth/complete-registration ─────────────
+router.post('/oauth/complete-registration', async (req, res) => {
+  try {
+    const { pendingToken, username } = req.body;
+    const cleanUsername = (username || '').trim();
+
+    if (!pendingToken) {
+      return res.status(400).json({ error: 'Missing OAuth session token. Please try signing in again.' });
+    }
+
+    if (!cleanUsername || cleanUsername.length < 3) {
+      return res.status(400).json({ error: 'Username must be at least 3 characters long.' });
+    }
+
+    // Verify pending OAuth token
+    let decoded;
+    try {
+      decoded = jwt.verify(pendingToken, JWT_SECRET);
+    } catch (e) {
+      return res.status(400).json({ error: 'OAuth registration session expired. Please sign in again.' });
+    }
+
+    if (!decoded.pendingOauth || !decoded.email || !decoded.provider) {
+      return res.status(400).json({ error: 'Invalid OAuth registration token.' });
+    }
+
+    const { provider, providerId, email, fullName } = decoded;
+    const users = readDB('users') || [];
+
+    // Check if username is already taken
+    const usernameExists = users.some(u => u.username && u.username.toLowerCase() === cleanUsername.toLowerCase());
+    if (usernameExists) {
+      return res.status(409).json({ error: 'Username is already taken. Please choose another.' });
+    }
+
+    // Double-check if user account was created concurrently
+    let existingUser = users.find(u =>
+      (u.email && u.email.toLowerCase() === email.toLowerCase()) ||
+      (provider === 'google' && u.googleId === providerId) ||
+      (provider === 'github' && u.githubId === providerId)
+    );
+
+    if (existingUser) {
+      const token = jwt.sign({ id: existingUser.id, username: existingUser.username }, JWT_SECRET, { expiresIn: '7d' });
+      const { passwordHash: _, ...safeUser } = existingUser;
+      return res.json({ message: `Welcome back, ${existingUser.username}! 🏹`, token, user: safeUser });
+    }
+
+    // Create new OAuth user with exact standard starting values (Level 1, 0 XP, 150 Coins)
+    const newUser = {
+      id: uuidv4(),
+      fullName: (fullName || cleanUsername || 'Scholar').trim(),
+      username: cleanUsername,
+      email: email.toLowerCase(),
+      phone: '',
+      [provider === 'google' ? 'googleId' : 'githubId']: providerId,
+      passwordHash: '',
+      createdAt: new Date().toISOString(),
+      level: 1,
+      xp: 0,
+      coins: 150,
+      loginStreak: 1,
+      loginDates: [new Date().toISOString().split('T')[0]],
+      quizStats: {
+        quizzesCompleted: 0,
+        missedByDomain: {}
+      },
+      hp: 100,
+      maxHp: 100,
+      avatar: { id: 'peasant' },
+      inventory: ['basic_book'],
+      equipped: { head: 'none', hand: 'none', pet: 'none' },
+      stats: {
+        quizzesCompleted: 0,
+        focusMinutes: 0,
+        lessonsCompleted: 0,
+        maxHabitStreak: 0
+      },
+      activeTheme: 'gold',
+      habits: [
+        { id: uuidv4(), name: 'Solve 1 DSA Problem', difficulty: 'medium', streak: 0, lastCompleted: '' },
+        { id: uuidv4(), name: 'Attend Lecture / Study 1 hour', difficulty: 'easy', streak: 0, lastCompleted: '' },
+        { id: uuidv4(), name: 'Write code in Python / JS', difficulty: 'hard', streak: 0, lastCompleted: '' }
+      ]
+    };
+
+    users.push(newUser);
+    writeDB('users', users);
+
+    console.log(`[OAuth Registration Complete] Created new account for ${email} (${cleanUsername})`);
+
+    const token = jwt.sign({ id: newUser.id, username: newUser.username }, JWT_SECRET, { expiresIn: '7d' });
+    const { passwordHash: _, ...safeUser } = newUser;
+
+    res.status(201).json({
+      message: '⚔️ Account registration complete! Welcome to ScholarQuest.',
+      token,
+      user: safeUser
+    });
+  } catch (err) {
+    console.error('[OAuth Registration Error]', err.message);
+    res.status(500).json({ error: 'Failed to complete registration.' });
   }
 });
 

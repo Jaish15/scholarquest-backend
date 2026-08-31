@@ -25,17 +25,18 @@ const setupStudySyncSocket = require('./modules/studySyncSocket');
 const app    = express();
 const server = http.createServer(app);
 
-// Flexible CORS setup allowing process.env.FRONTEND_URL & any local dev port (8086, 8080, 5500, etc.)
+// Flexible CORS setup allowing process.env.FRONTEND_URL, Firebase domains (*.web.app, *.firebaseapp.com), & any local dev port
 const corsOptions = {
   origin: function (origin, callback) {
     if (!origin) return callback(null, true);
     if (
       origin === process.env.FRONTEND_URL ||
+      /^https:\/\/[\w-]+\.(web\.app|firebaseapp\.com)$/.test(origin) ||
       /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)
     ) {
       return callback(null, true);
     }
-    return callback(null, true);
+    return callback(null, true); // Permissive fallback for dynamic cloud clients
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
@@ -65,11 +66,12 @@ app.use(passport.initialize());
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // ── Health Check ──────────────────────────────────────────────
-app.get('/', (req, res) => {
+app.get(['/', '/health'], (req, res) => {
   res.json({
     status: 'ok',
     message: '⚔️ ScholarQuest API & StudySync (Friends & DMs) running!',
     version: '2.0.0',
+    timestamp: new Date().toISOString(),
     docs: 'See README.md for all endpoints'
   });
 });
@@ -204,6 +206,8 @@ app.post('/api/codescroll/run', async (req, res) => {
       };
 
       try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 2500);
         const judgeRes = await fetch(endpoint, {
           method: 'POST',
           headers,
@@ -211,8 +215,10 @@ app.post('/api/codescroll/run', async (req, res) => {
             source_code: code,
             language_id: langId,
             stdin: ''
-          })
+          }),
+          signal: controller.signal
         });
+        clearTimeout(timeoutId);
 
         if (judgeRes.ok) {
           const data = await judgeRes.json();
