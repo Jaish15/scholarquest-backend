@@ -1,18 +1,16 @@
 /* ============================================================
    Route: /api/habits
    Handles: List, create, update, streak-tracking habits
-   Storage: JSON file (data/users.json, per-user habits array)
-   TODO: Replace with Mongoose Habit model (or embed in User)
+   Storage: Neon PostgreSQL
    ============================================================ */
 
 const express = require('express');
 const { v4: uuidv4 } = require('uuid');
-const { readDB, writeDB } = require('../db');
+const db = require('../db');
 const { verifyToken } = require('../middleware/auth');
 
 const router = express.Router();
 
-// Helper: check if today's date differs from lastCompleted
 function isNewDay(lastCompleted) {
   if (!lastCompleted) return true;
   const last  = new Date(lastCompleted).toDateString();
@@ -21,78 +19,94 @@ function isNewDay(lastCompleted) {
 }
 
 // ── GET /api/habits/:userId ───────────────────────────────────
-router.get('/:userId', verifyToken, (req, res) => {
-  const users = readDB('users');
-  const user  = users.find(u => u.id === req.params.userId);
-  if (!user) return res.status(404).json({ error: 'User not found' });
-  res.json({ habits: user.habits || [] });
+router.get('/:userId', verifyToken, async (req, res) => {
+  try {
+    const result = await db.query(
+      `SELECT * FROM habits WHERE user_id = $1 ORDER BY created_at ASC`,
+      [req.params.userId]
+    );
+    const habits = result.rows.map(h => ({
+      id: h.id,
+      name: h.name,
+      difficulty: h.difficulty,
+      streak: h.streak,
+      lastCompleted: h.last_completed || ''
+    }));
+    res.json({ habits });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ── POST /api/habits/:userId ──────────────────────────────────
-// Body: { name, difficulty }
-router.post('/:userId', verifyToken, (req, res) => {
+router.post('/:userId', verifyToken, async (req, res) => {
   try {
     const { name, difficulty = 'medium' } = req.body;
     if (!name) return res.status(400).json({ error: 'name is required' });
 
-    const users = readDB('users');
-    const idx   = users.findIndex(u => u.id === req.params.userId);
-    if (idx === -1) return res.status(404).json({ error: 'User not found' });
+    const userCheck = await db.query(`SELECT id FROM users WHERE id = $1`, [req.params.userId]);
+    if (!userCheck.rows.length) return res.status(404).json({ error: 'User not found' });
 
-    const newHabit = { id: uuidv4(), name, difficulty, streak: 0, lastCompleted: '' };
-    users[idx].habits = [...(users[idx].habits || []), newHabit];
-    writeDB('users', users);
-
-    res.status(201).json({ message: 'Habit created!', habit: newHabit });
+    const id = uuidv4();
+    const result = await db.query(
+      `INSERT INTO habits (id, user_id, name, difficulty, streak) VALUES ($1, $2, $3, $4, 0) RETURNING *`,
+      [id, req.params.userId, name, difficulty]
+    );
+    const habit = result.rows[0];
+    res.status(201).json({
+      message: 'Habit created!',
+      habit: { id: habit.id, name: habit.name, difficulty: habit.difficulty, streak: habit.streak, lastCompleted: '' }
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
 // ── PATCH /api/habits/:userId/:habitId/complete ───────────────
-// Marks habit as completed today, updates streak
-router.patch('/:userId/:habitId/complete', verifyToken, (req, res) => {
+router.patch('/:userId/:habitId/complete', verifyToken, async (req, res) => {
   try {
-    const users = readDB('users');
-    const idx   = users.findIndex(u => u.id === req.params.userId);
-    if (idx === -1) return res.status(404).json({ error: 'User not found' });
+    const { userId, habitId } = req.params;
 
-    const habits  = users[idx].habits || [];
-    const hIdx    = habits.findIndex(h => h.id === req.params.habitId);
-    if (hIdx === -1) return res.status(404).json({ error: 'Habit not found' });
+    const habitRes = await db.query(
+      `SELECT * FROM habits WHERE id = $1 AND user_id = $2`, [habitId, userId]
+    );
+    if (!habitRes.rows.length) return res.status(404).json({ error: 'Habit not found' });
+    const habit = habitRes.rows[0];
 
-    const habit = habits[hIdx];
-
-    if (!isNewDay(habit.lastCompleted)) {
+    if (!isNewDay(habit.last_completed)) {
       return res.status(400).json({ error: 'Habit already completed today!' });
     }
 
-    // Streak logic: consecutive days = streak++, else reset to 1
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
-    const lastWasYesterday = habit.lastCompleted &&
-      new Date(habit.lastCompleted).toDateString() === yesterday.toDateString();
+    const lastWasYesterday = habit.last_completed &&
+      new Date(habit.last_completed).toDateString() === yesterday.toDateString();
 
-    habit.streak       = lastWasYesterday ? habit.streak + 1 : 1;
-    habit.lastCompleted = new Date().toISOString();
+    const newStreak = lastWasYesterday ? habit.streak + 1 : 1;
+    const now = new Date().toISOString();
 
-    // XP reward for completing habit
+    const updated = await db.query(
+      `UPDATE habits SET streak = $1, last_completed = $2 WHERE id = $3 RETURNING *`,
+      [newStreak, now, habitId]
+    );
+
+    // XP reward
     const xpBonus = habit.difficulty === 'hard' ? 30 : habit.difficulty === 'medium' ? 20 : 10;
-    users[idx].xp = (users[idx].xp || 0) + xpBonus;
 
-    // Update maxHabitStreak stat
-    if (!users[idx].stats) users[idx].stats = {};
-    if (habit.streak > (users[idx].stats.maxHabitStreak || 0)) {
-      users[idx].stats.maxHabitStreak = habit.streak;
-    }
+    const userRes = await db.query(`SELECT xp, stats FROM users WHERE id = $1`, [userId]);
+    const user = userRes.rows[0];
+    const stats = { ...user.stats };
+    if (newStreak > (stats.maxHabitStreak || 0)) stats.maxHabitStreak = newStreak;
 
-    habits[hIdx]      = habit;
-    users[idx].habits = habits;
-    writeDB('users', users);
+    await db.query(
+      `UPDATE users SET xp = xp + $1, stats = $2, updated_at = NOW() WHERE id = $3`,
+      [xpBonus, JSON.stringify(stats), userId]
+    );
 
+    const h = updated.rows[0];
     res.json({
-      message: `🔥 Streak: ${habit.streak} days!`,
-      habit,
+      message: `🔥 Streak: ${newStreak} days!`,
+      habit: { id: h.id, name: h.name, difficulty: h.difficulty, streak: h.streak, lastCompleted: h.last_completed },
       xpEarned: xpBonus
     });
   } catch (err) {
@@ -101,14 +115,12 @@ router.patch('/:userId/:habitId/complete', verifyToken, (req, res) => {
 });
 
 // ── DELETE /api/habits/:userId/:habitId ───────────────────────
-router.delete('/:userId/:habitId', verifyToken, (req, res) => {
+router.delete('/:userId/:habitId', verifyToken, async (req, res) => {
   try {
-    const users = readDB('users');
-    const idx   = users.findIndex(u => u.id === req.params.userId);
-    if (idx === -1) return res.status(404).json({ error: 'User not found' });
-
-    users[idx].habits = (users[idx].habits || []).filter(h => h.id !== req.params.habitId);
-    writeDB('users', users);
+    await db.query(
+      `DELETE FROM habits WHERE id = $1 AND user_id = $2`,
+      [req.params.habitId, req.params.userId]
+    );
     res.json({ message: 'Habit removed.' });
   } catch (err) {
     res.status(500).json({ error: err.message });

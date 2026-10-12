@@ -1,92 +1,147 @@
 /* ============================================================
    Route: /api/quizzes
    Handles: List quizzes, submit answers, earn XP
-   Storage: JSON file (data/quizzes.json)
-   TODO: Replace readDB/writeDB with Mongoose Quiz model
+   Storage: Neon PostgreSQL
    ============================================================ */
 
 const express = require('express');
-const { readDB, writeDB } = require('../db');
+const db = require('../db');
 const { verifyToken } = require('../middleware/auth');
 
 const router = express.Router();
 
-// XP & Coin rewards per difficulty
 const REWARDS = {
   easy:   { xp: 20,  coins: 10 },
   medium: { xp: 40,  coins: 20 },
   hard:   { xp: 80,  coins: 40 }
 };
 
+const XP_PER_LEVEL = (level) => level * 100;
+
 // ── GET /api/quizzes ──────────────────────────────────────────
-// Returns all available quizzes (questions included)
-router.get('/', (req, res) => {
-  // TODO (MongoDB): Quiz.find({})
-  const quizzes = readDB('quizzes');
-  res.json({ quizzes });
+router.get('/', async (req, res) => {
+  try {
+    const quizzesRes = await db.query(`SELECT * FROM quizzes ORDER BY created_at DESC`);
+    const quizIds = quizzesRes.rows.map(q => q.id);
+
+    if (!quizIds.length) return res.json({ quizzes: [] });
+
+    const questionsRes = await db.query(
+      `SELECT * FROM quiz_questions WHERE quiz_id = ANY($1) ORDER BY sort_order ASC`,
+      [quizIds]
+    );
+
+    const questionsByQuiz = {};
+    for (const q of questionsRes.rows) {
+      if (!questionsByQuiz[q.quiz_id]) questionsByQuiz[q.quiz_id] = [];
+      questionsByQuiz[q.quiz_id].push({
+        id: q.id,
+        question: q.question,
+        options: q.options,
+        correctAnswer: q.correct_answer
+      });
+    }
+
+    const quizzes = quizzesRes.rows.map(q => ({
+      id: q.id,
+      title: q.title,
+      description: q.description,
+      difficulty: q.difficulty,
+      domain: q.domain,
+      tags: q.tags,
+      questions: questionsByQuiz[q.id] || []
+    }));
+
+    res.json({ quizzes });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ── GET /api/quizzes/:id ──────────────────────────────────────
-// Returns a single quiz by ID
-router.get('/:id', (req, res) => {
-  const quizzes = readDB('quizzes');
-  const quiz    = quizzes.find(q => q.id === req.params.id);
-  if (!quiz) return res.status(404).json({ error: 'Quiz not found' });
-  res.json({ quiz });
+router.get('/:id', async (req, res) => {
+  try {
+    const quizRes = await db.query(`SELECT * FROM quizzes WHERE id = $1`, [req.params.id]);
+    if (!quizRes.rows.length) return res.status(404).json({ error: 'Quiz not found' });
+
+    const questionsRes = await db.query(
+      `SELECT * FROM quiz_questions WHERE quiz_id = $1 ORDER BY sort_order ASC`,
+      [req.params.id]
+    );
+
+    const quiz = {
+      ...quizRes.rows[0],
+      questions: questionsRes.rows.map(q => ({
+        id: q.id,
+        question: q.question,
+        options: q.options,
+        correctAnswer: q.correct_answer
+      }))
+    };
+
+    res.json({ quiz });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // ── POST /api/quizzes/submit ──────────────────────────────────
-// Body: { quizId, answers: [{ questionId, selectedOption }], userId }
-// Returns: { score, total, xpEarned, coinsEarned }
-router.post('/submit', verifyToken, (req, res) => {
+router.post('/submit', verifyToken, async (req, res) => {
   try {
     const { quizId, answers = [], userId } = req.body;
 
-    const quizzes = readDB('quizzes');
-    const quiz    = quizzes.find(q => q.id === quizId);
-    if (!quiz) return res.status(404).json({ error: 'Quiz not found' });
+    const quizRes = await db.query(`SELECT * FROM quizzes WHERE id = $1`, [quizId]);
+    if (!quizRes.rows.length) return res.status(404).json({ error: 'Quiz not found' });
+    const quiz = quizRes.rows[0];
+
+    const questionsRes = await db.query(
+      `SELECT * FROM quiz_questions WHERE quiz_id = $1`, [quizId]
+    );
+    const questions = questionsRes.rows;
 
     // Grade answers
     let score = 0;
     const graded = answers.map(ans => {
-      const question = quiz.questions.find(q => q.id === ans.questionId);
-      const correct  = question && question.correctAnswer === ans.selectedOption;
+      const question = questions.find(q => q.id === ans.questionId);
+      const correct = question && question.correct_answer === ans.selectedOption;
       if (correct) score++;
-      return { questionId: ans.questionId, correct, correctAnswer: question?.correctAnswer };
+      return { questionId: ans.questionId, correct, correctAnswer: question?.correct_answer };
     });
 
-    const total      = quiz.questions.length;
-    const perfect    = score === total;
-    const reward     = REWARDS[quiz.difficulty] || REWARDS.medium;
-    const xpEarned   = Math.round(reward.xp   * (score / total));
-    const coinsEarned= Math.round(reward.coins * (score / total));
+    const total       = questions.length;
+    const perfect     = score === total;
+    const reward      = REWARDS[quiz.difficulty] || REWARDS.medium;
+    const xpEarned    = Math.round(reward.xp    * (score / total));
+    const coinsEarned = Math.round(reward.coins  * (score / total));
 
     // Update user stats
     if (userId) {
-      const users = readDB('users');
-      const idx   = users.findIndex(u => u.id === userId);
-      if (idx !== -1) {
-        users[idx].xp    = (users[idx].xp    || 0) + xpEarned;
-        users[idx].coins = (users[idx].coins  || 0) + coinsEarned;
-        users[idx].stats = users[idx].stats || {};
-        users[idx].stats.quizzesCompleted = (users[idx].stats.quizzesCompleted || 0) + 1;
+      const userRes = await db.query(`SELECT * FROM users WHERE id = $1`, [userId]);
+      if (userRes.rows.length) {
+        const user = userRes.rows[0];
+        let xp    = (user.xp    || 0) + xpEarned;
+        let coins = (user.coins || 0) + coinsEarned;
+        let level = user.level || 1;
+        const stats = { ...user.stats, quizzesCompleted: ((user.stats?.quizzesCompleted || 0) + 1) };
 
         // Auto level-up
-        const XP_PER_LEVEL = (level) => level * 100;
-        while (users[idx].xp >= XP_PER_LEVEL(users[idx].level)) {
-          users[idx].xp    -= XP_PER_LEVEL(users[idx].level);
-          users[idx].level += 1;
-          users[idx].coins += 50;
+        while (xp >= XP_PER_LEVEL(level)) {
+          xp    -= XP_PER_LEVEL(level);
+          level += 1;
+          coins += 50;
         }
-        writeDB('users', users);
+
+        await db.query(
+          `UPDATE users SET xp = $1, coins = $2, level = $3, stats = $4, updated_at = NOW() WHERE id = $5`,
+          [xp, coins, level, JSON.stringify(stats), userId]
+        );
       }
     }
 
     res.json({
-      message: perfect ? '🏆 Perfect Score! Quest Cleared!' : `✅ Quiz submitted!`,
+      message: perfect ? '🏆 Perfect Score! Quest Cleared!' : '✅ Quiz submitted!',
       score, total, perfect, xpEarned, coinsEarned, graded
     });
-
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

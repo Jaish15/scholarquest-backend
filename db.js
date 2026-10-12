@@ -1,41 +1,43 @@
 /* ============================================================
-   ScholarQuest — JSON File DB Helper
-   ============================================================
-   This module abstracts file-based storage so that when you
-   migrate to MongoDB, you only need to update this file.
-
-   MongoDB Migration Steps (when ready):
-   1. npm install mongoose
-   2. Create models/ folder with User.js, Quiz.js, Habit.js
-   3. Replace read/write calls here with mongoose model calls
-   4. Update .env with MONGO_URI=mongodb://...
+   ScholarQuest — PostgreSQL Database Connection
+   Uses Neon serverless PostgreSQL via DATABASE_URL
    ============================================================ */
 
-const fs   = require('fs');
-const path = require('path');
+require('dotenv').config();
+const { Pool } = require('pg');
 
-const DATA_DIR = path.join(__dirname, 'data');
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false },
+  max: 10,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 5000,
+});
+
+pool.on('error', (err) => {
+  console.error('[DB] Unexpected error on idle client:', err.message);
+});
 
 /**
- * Read a JSON data file
- * @param {string} filename - e.g. 'users' or 'quizzes'
- * @returns {Array|Object}
+ * Run a SQL query
+ * @param {string} text - SQL query string
+ * @param {Array}  params - Query parameters
  */
-function readDB(filename) {
-  const filePath = path.join(DATA_DIR, `${filename}.json`);
-  if (!fs.existsSync(filePath)) return [];
-  const raw = fs.readFileSync(filePath, 'utf8');
-  return JSON.parse(raw);
+async function query(text, params) {
+  const start = Date.now();
+  const res = await pool.query(text, params);
+  const duration = Date.now() - start;
+  if (process.env.DB_LOGGING === 'true') {
+    console.log(`[DB] query: ${text} | duration: ${duration}ms | rows: ${res.rowCount}`);
+  }
+  return res;
 }
 
 /**
- * Write data to a JSON file
- * @param {string} filename - e.g. 'users' or 'quizzes'
- * @param {Array|Object} data
+ * Get a client from the pool (for transactions)
  */
-function writeDB(filename, data) {
-  const filePath = path.join(DATA_DIR, `${filename}.json`);
-  fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf8');
+function getClient() {
+  return pool.connect();
 }
 
-module.exports = { readDB, writeDB };
+module.exports = { query, getClient, pool };

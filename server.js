@@ -9,7 +9,7 @@ const http     = require('http');
 const { Server } = require('socket.io');
 const cors     = require('cors');
 const path     = require('path');
-const { readDB, writeDB } = require('./db');
+const db = require('./db');
 
 // ── Route Imports ─────────────────────────────────────────────
 const authRoutes        = require('./routes/auth');
@@ -315,17 +315,13 @@ app.get('/api/codescroll/leetcode-stats/:username', async (req, res) => {
 });
 
 // ── POST /api/user/leetcode (Save linked username to profile) ──────────────────
-app.post('/api/user/leetcode', (req, res) => {
+app.post('/api/user/leetcode', async (req, res) => {
   try {
     const { userId, leetcodeUsername } = req.body;
-    const users = readDB('users');
-    const user = users.find(u => u.id === userId || u.username === userId);
-
-    if (user) {
-      user.leetcodeUsername = leetcodeUsername || '';
-      writeDB('users', users);
-    }
-
+    await db.query(
+      `UPDATE users SET leetcode_username = $1, updated_at = NOW() WHERE id = $2 OR username = $2`,
+      [leetcodeUsername || '', userId]
+    );
     return res.json({ success: true, leetcodeUsername: leetcodeUsername || '' });
   } catch (err) {
     return res.status(500).json({ error: err.message });

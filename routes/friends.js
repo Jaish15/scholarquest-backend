@@ -5,7 +5,7 @@
 
 const express = require('express');
 const { verifyToken } = require('../middleware/auth');
-const { readDB } = require('../db');
+const db = require('../db');
 const store = require('../modules/studySyncStore');
 
 const router = express.Router();
@@ -20,15 +20,11 @@ router.get('/search', verifyToken, async (req, res) => {
     }
 
     const currentUserId = req.user.id;
-    const allUsers = readDB('users');
-
-    // Filter matches (exclude current user)
-    const matches = allUsers.filter(u => 
-      u.id !== currentUserId &&
-      (
-        (u.username && u.username.toLowerCase().includes(query)) ||
-        (u.email && u.email.toLowerCase().includes(query))
-      )
+    const { rows: matches } = await db.query(
+      `SELECT id, username, email, level, avatar, stats FROM users
+       WHERE id != $1 AND (LOWER(username) LIKE $2 OR LOWER(email) LIKE $2)
+       LIMIT 30`,
+      [currentUserId, `%${query}%`]
     );
 
     // Attach relationship status for each matched user
@@ -79,7 +75,7 @@ router.post('/request', verifyToken, async (req, res) => {
       return res.status(400).json({ error: 'recipientId is required' });
     }
 
-    const recipient = store.getUserById(recipientId);
+    const recipient = await store.getUserById(recipientId);
     if (!recipient) {
       return res.status(404).json({ error: 'Scholar not found' });
     }
@@ -89,7 +85,7 @@ router.post('/request', verifyToken, async (req, res) => {
     // Notify recipient via Socket.io if online
     const socketModule = require('../modules/studySyncSocket');
     if (socketModule && socketModule.notifyFriendRequest) {
-      const requester = store.getUserById(requesterId);
+      const requester = await store.getUserById(requesterId);
       socketModule.notifyFriendRequest(recipientId, {
         id: friendship.id,
         requesterId,
@@ -145,7 +141,7 @@ router.post('/respond', verifyToken, async (req, res) => {
         requestId,
         action,
         userId: currentUserId,
-        user: store.getUserById(currentUserId)
+        user: await store.getUserById(currentUserId)
       });
     }
 

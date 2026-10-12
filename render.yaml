@@ -27,3 +27,7 @@ services:
         sync: false
       - key: JUDGE0_API_HOST
         value: judge0-ce.p.rapidapi.com
+      - key: DATABASE_URL
+        sync: false
+      - key: DATABASE_URL_UNPOOLED
+        sync: false

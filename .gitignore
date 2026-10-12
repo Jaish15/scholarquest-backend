@@ -17,3 +17,4 @@ data/study_rooms.json
 
 # Logs
 *.log
+.neon
